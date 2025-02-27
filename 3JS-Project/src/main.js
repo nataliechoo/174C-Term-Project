@@ -1,7 +1,8 @@
 import './style.css' // edit later
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+// import Stats from 'three/examples/jsm/libs/stats.module' // FOR FPS MONITORING
 
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(
@@ -11,27 +12,77 @@ const camera = new THREE.PerspectiveCamera(
   1000
 )
 
+camera.position.z = 1000
+
 // Renderer and Canvas
 const renderer = new THREE.WebGLRenderer()
 renderer.setAnimationLoop( animate );
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
-// Cube body
-const cube_geometry = new THREE.BoxGeometry(1,1,1)
-const gcube_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }) // Green material
-const cube = new THREE.Mesh(cube_geometry, gcube_material)
-scene.add(cube)
+// User controls 
+const controls = new OrbitControls(camera, renderer.domElement)
+controls.enableDamping = true
+controls.dampingFactor = 0.25;
+controls.enableZoom = true;
 
-camera.position.z = 5
+// LIGHTING (not all needed, but atlweast one light needed to see the object)
+var keyLight = new THREE.DirectionalLight(new THREE.Color('hsl(30, 100%, 75%)'), 1.0);
+keyLight.position.set(-100, 0, 100);
 
-animate();
+var fillLight = new THREE.DirectionalLight(new THREE.Color('hsl(240, 100%, 75%)'), 0.75);
+fillLight.position.set(100, 0, 100);
+
+var backLight = new THREE.DirectionalLight(0xffffff, 1.0);
+backLight.position.set(100, 0, -100).normalize();
+
+scene.add(keyLight);
+scene.add(fillLight);
+scene.add(backLight);
+
+
+const objLoader = new OBJLoader()
+objLoader.setPath('/assets/')
+objLoader.load(
+  // resource
+  'star.obj',
+
+  // onLoad callback 
+  function ( object ) {
+    // Add the loaded object to the scene
+    object.position.y -= 60;
+    scene.add( object );
+  },
+
+  // onProgress callback
+  function ( xhr ) {
+    console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+  },
+
+  // onError callback
+  function ( err ) {
+    console.error( 'An error happened' );
+  }
+);
+
+window.addEventListener('resize', onWindowResize, false)
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight
+    camera.updateProjectionMatrix()
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    renderer.render(scene, camera)
+}
+// FOR FPS MONITORING
+// const stats = new Stats()
+// document.body.appendChild(stats.dom)
 
 function animate() {
-  //requestAnimationFrame(animate);
+  requestAnimationFrame(animate);
+  
+  controls.update()
 
-  cube.rotation.x += 0.01;
-	cube.rotation.y += 0.01;
+  renderer.render(scene, camera)
 
-  renderer.render(scene, camera);
+  // stats.update() // FOR FPS MONITORING
 }
+animate()
