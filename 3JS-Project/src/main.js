@@ -45,7 +45,7 @@ const objLoader = new OBJLoader()
 objLoader.setPath('/assets/')
 objLoader.load(
   // resource
-  'star.obj',
+  'star/star.obj',
 
   // onLoad callback 
   function ( object ) {
