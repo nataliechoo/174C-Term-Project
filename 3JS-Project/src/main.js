@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js'; 
+import Stats from 'three/examples/jsm/libs/stats.module' // FOR FPS MONITORING
 
+THREE.Cache.enabled = true;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB); // Light blue sky 
 
@@ -329,10 +331,14 @@ starMtlLoader.load('model.mtl',
   }
 );
 
+// FOR FPS MONITORING
+const stats = new Stats()
+document.body.appendChild(stats.dom)
 
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
+  stats.update() // FOR FPS MONITORING
 }
 animate();
