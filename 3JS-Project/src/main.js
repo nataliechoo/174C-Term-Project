@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module' // FOR FPS MONITORING
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
 THREE.Cache.enabled = true;
 const scene = new THREE.Scene();
@@ -44,7 +45,11 @@ scene.add(backLight);
 
 // helper function to load model
 function loadGLTFModels(models) {
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/')
   const loader = new GLTFLoader();
+  loader.setDRACOLoader(dracoLoader)
+
   models.forEach(model => {
     loader.load(
       model.path,
@@ -67,56 +72,56 @@ function loadGLTFModels(models) {
 const models = [
   {
     name: "baseAndWindow",
-    path: "/assets/base-and-window/base_and_window.glb",
+    path: "/assets/base-and-window/base_and_window-transformed.glb",
     position: new THREE.Vector3(0, 0, 0),
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(1, 1, 1)
   },
   {
     name: "table",
-    path: "/assets/long-table/long_table.glb",
+    path: "/assets/long-table/long_table-transformed.glb",
     position: new THREE.Vector3(0, 110, -600),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
     scale: new THREE.Vector3(0.5, 0.5, 0.5)
   },
   {
     name: "smallTable",
-    path: "/assets/small-table/small_table.glb",
+    path: "/assets/small-table/small_table-transformed.glb",
     position: new THREE.Vector3(-200, 110, -500),
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
     scale: new THREE.Vector3(0.4, 0.4, 0.4)
   },
   {
     name: "cup",
-    path: "/assets/cup/cup.glb",
+    path: "/assets/cup/cup-transformed.glb",
     position: new THREE.Vector3(-100, 270, 200),
     rotation: new THREE.Euler(),
     scale: new THREE.Vector3(0.3, 0.3, 0.3)
   },
   {
     name: "teapot",
-    path: "/assets/teapot/teapot.glb",
+    path: "/assets/teapot/teapot-transformed.glb",
     position: new THREE.Vector3(-500, 110, 0),
     rotation: new THREE.Euler(),
     scale: new THREE.Vector3(3, 3, 3)
   },
   {
     name: "capybara",
-    path: "/assets/capybara/capybara.glb",
+    path: "/assets/capybara/capybara-transformed.glb",
     position: new THREE.Vector3(400, 110, 300),
     rotation: new THREE.Euler(),
     scale: new THREE.Vector3(0.3, 0.3, 0.3)
   },
   {
     name: "miffy",
-    path: "/assets/miffy-glb/miffy.glb",
+    path: "/assets/miffy-glb/miffy-transformed.glb",
     position: new THREE.Vector3(-200, 60, -400),
     rotation: new THREE.Euler(0, Math.PI / 6, 0),
     scale: new THREE.Vector3(1.2, 1.2, 1.2)
   },
   {
     name: "star",
-    path: "/assets/star/star.glb",
+    path: "/assets/star/star-transformed.glb",
     position: new THREE.Vector3(0, 900, -400),
     rotation: new THREE.Euler(0, Math.PI / 4, 0),
     scale: new THREE.Vector3(1, 1, 1)
