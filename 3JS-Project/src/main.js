@@ -2,6 +2,7 @@ import './style.css' // edit later
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 // import Stats from 'three/examples/jsm/libs/stats.module' // FOR FPS MONITORING
 
 const scene = new THREE.Scene()
@@ -40,30 +41,48 @@ scene.add(keyLight);
 scene.add(fillLight);
 scene.add(backLight);
 
+const mtlLoader = new MTLLoader()
+// mtlLoader.setTexturePath('/assets/')
+mtlLoader.setPath('/assets/')
+mtlLoader.load(
+  // source
+  'star/model.mtl',
 
-const objLoader = new OBJLoader()
-objLoader.setPath('/assets/')
-objLoader.load(
-  // resource
-  'star/star.obj',
-
-  // onLoad callback 
-  function ( object ) {
+  // preLoad callback 
+  function ( materials ) {
     // Add the loaded object to the scene
-    object.position.y -= 60;
-    scene.add( object );
+    materials.preload();
+
+    const objLoader = new OBJLoader()
+    objLoader.setMaterials(materials); // COMMENT THIS LINE TO REMOVE MATERIAL 
+    objLoader.setPath('/assets/')
+    objLoader.load(
+      // source
+      'star/star.obj',
+
+      // onLoad callback 
+      function ( object ) {
+        // Add the loaded object to the scene
+        object.position.y -= 60;
+        scene.add( object );
+      },
+
+      // onProgress callback
+      function ( xhr ) {
+        console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+      },
+
+      // onError callback
+      function ( err ) {
+        console.error( 'An error happened' );
+      }
+    );
   },
 
-  // onProgress callback
-  function ( xhr ) {
-    console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
-  },
+  
+)
 
-  // onError callback
-  function ( err ) {
-    console.error( 'An error happened' );
-  }
-);
+
 
 window.addEventListener('resize', onWindowResize, false)
 function onWindowResize() {
