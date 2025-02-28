@@ -242,39 +242,57 @@ capybaraMtlLoader.load('model.mtl',
 );
 
 // Miffy model
-const miffyMtlLoader = new MTLLoader();
-miffyMtlLoader.setPath('/assets/miffy/');
-miffyMtlLoader.load('model.mtl',
-  function (materials) {
-    console.log("Miffy MTL file loaded successfully", materials);
-    materials.preload();
+// const miffyMtlLoader = new MTLLoader();
+// miffyMtlLoader.setPath('/assets/miffy/');
+// miffyMtlLoader.load('model.mtl',
+//   function (materials) {
+//     console.log("Miffy MTL file loaded successfully", materials);
+//     materials.preload();
 
-    const miffyObjLoader = new OBJLoader();
-    miffyObjLoader.setMaterials(materials);
-    miffyObjLoader.setPath('/assets/miffy/');
-    miffyObjLoader.load('miffy.obj',
-      function (object) {
-        console.log("Miffy OBJ file loaded successfully");
-        scene.add(object);
+//     const miffyObjLoader = new OBJLoader();
+//     miffyObjLoader.setMaterials(materials);
+//     miffyObjLoader.setPath('/assets/miffy/');
+//     miffyObjLoader.load('miffy.obj',
+//       function (object) {
+//         console.log("Miffy OBJ file loaded successfully");
+//         scene.add(object);
 
-        object.position.set(-200, 60, -400); 
-        object.rotation.y = Math.PI / 6;
-        object.scale.set(1.2, 1.2, 1.2); 
+//         object.position.set(-200, 60, -400); 
+//         object.rotation.y = Math.PI / 6;
+//         object.scale.set(1.2, 1.2, 1.2); 
 
-      },
-      undefined,
-      function (err) {
-        console.error('Error loading Miffy OBJ:', err);
-      }
-    );
-  },
-  undefined,
-  function (err) {
-    console.error('Error loading Miffy MTL:', err);
-    console.error('Error details:', err.message || "No message available");
-    console.error('Error event:', err.target);
-  }
-);
+//       },
+//       undefined,
+//       function (err) {
+//         console.error('Error loading Miffy OBJ:', err);
+//       }
+//     );
+//   },
+//   undefined,
+//   function (err) {
+//     console.error('Error loading Miffy MTL:', err);
+//     console.error('Error details:', err.message || "No message available");
+//     console.error('Error event:', err.target);
+//   }
+// );
+
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// Create a GLTFLoader instance
+const loader = new GLTFLoader();
+
+loader.load('/assets/miffy-glb/miffy.glb', (gltf) => {
+  const miffy = gltf.scene;
+  scene.add(miffy);
+
+  miffy.position.set(-200, 60, -400); 
+  miffy.rotation.y = Math.PI / 6;
+  miffy.scale.set(1.2, 1.2, 1.2); 
+
+  console.log("Miffy GLB file loaded successfully");
+}, undefined, (err) => {
+  console.error('Error loading Miffy GLB:', err);
+});
 
 // star model
 const starMtlLoader = new MTLLoader();
