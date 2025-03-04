@@ -48,6 +48,24 @@ var backLight = new THREE.DirectionalLight(0xffffff, 2.0);
 backLight.position.set(100, 100, -100);
 scene.add(backLight);
 
+function applyTeapotMaterial(mesh) {
+  // load externals
+  const textureLoader = new THREE.TextureLoader();
+  const normalMap = textureLoader.load("/assets/teapot/model_0_normal.png");
+
+  // set material properties
+  mesh.material.transmission = 1.0; 
+  mesh.material.metalness = 1.0; 
+  mesh.material.roughness = 0.2; 
+
+  // load color
+  mesh.material.Color = textureLoader.load("/assets/teapot/model_0_color.png");
+
+  // apply texture via normal map
+  mesh.material.normalMap = normalMap;
+  mesh.material.needsUpdate = true;
+}
+
 // helper function to load model
 function loadGLTFModels(models) {
   const dracoLoader = new DRACOLoader();
@@ -63,6 +81,18 @@ function loadGLTFModels(models) {
         object.position.copy(model.position);
         object.rotation.copy(model.rotation);
         object.scale.copy(model.scale);
+
+        if (model.name === "teapot") {
+          object.traverse((node) => {
+            if (node.isMesh) {
+              const mesh = node;
+
+              //apply teapot materials
+              applyTeapotMaterial(mesh);
+            }
+          });
+        }
+
         scene.add(object);
         console.log(`${model.name} GLB loaded successfully`);
       },
