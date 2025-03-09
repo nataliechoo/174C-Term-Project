@@ -29,6 +29,13 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.25;
 controls.enableZoom = true;
 
+//global for animating!
+let miffyWaveMixer;
+let miffyPickupMixer;
+let miffyHoldingMixer;
+let miffyPutdownMixer;
+// let signMixer;
+
 // lighting
 var keyLight = new THREE.DirectionalLight(
   new THREE.Color("hsl(30, 100%, 85%)"),
@@ -109,7 +116,42 @@ function applyCapybaraMaterial(mesh, index) {
   mesh.material.needsUpdate = true;
 }
 
-// helper function to load model
+function miffyPickup(object, gltf){
+  scene.add(object);
+  miffyPickupMixer = new THREE.AnimationMixer(object);
+  const clips = gltf.animations;
+  const pickupClip = THREE.AnimationClip.findByName(clips, 'pickup');
+
+  const action = miffyPickupMixer.clipAction(pickupClip);
+  console.log("ANIMATING PICKUP CLIP");
+  console.log(pickupClip);
+  action.play(); 
+}
+
+function miffyHolding(object, gltf){
+  scene.add(object);
+  miffyHoldingMixer = new THREE.AnimationMixer(object);
+  const clips = gltf.animations;
+  const holdingClip = THREE.AnimationClip.findByName(clips, 'holding');
+
+  const action = miffyHoldingMixer.clipAction(holdingClip);
+  console.log("ANIMATING HOLDING CLIP");
+  console.log(holdingClip);
+  action.play(); 
+}
+
+function miffyPutdown(object, gltf){
+  scene.add(object);
+  miffyPutdownMixer = new THREE.AnimationMixer(object);
+  const clips = gltf.animations;
+  const putdownClip = THREE.AnimationClip.findByName(clips, 'putdown');
+
+  const action = miffyPutdownMixer.clipAction(putdownClip);
+  console.log("ANIMATING PUTDOWN CLIP");
+  console.log(putdownClip);
+  action.play(); 
+}
+
 function loadGLTFModels(models) {
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
@@ -124,6 +166,12 @@ function loadGLTFModels(models) {
         object.position.copy(model.position);
         object.rotation.copy(model.rotation);
         object.scale.copy(model.scale);
+
+        gltf.scene.traverse((node) => {
+          if (node.isBone) {
+            console.log("Bone found:", node.name); // Log all bone names
+          }
+        });
 
         if (model.name === "teapot") {
           object.traverse((node) => {
@@ -142,13 +190,47 @@ function loadGLTFModels(models) {
               const mesh = node;
 
               // Apply capybara material properties and textures
-              applyCapybaraMaterial(mesh, meshIndex);
+              // applyCapybaraMaterial(mesh, meshIndex);
 
               // Increment the mesh index for the next mesh
               meshIndex++;
             }
           });
         }
+        if (model.name === "miffy-wave") {
+          scene.add(object);
+          miffyWaveMixer = new THREE.AnimationMixer(gltf.scene);
+          const clips = gltf.animations;
+          const waveClip = THREE.AnimationClip.findByName(clips, 'Waving');
+
+          const action = miffyWaveMixer.clipAction(waveClip);
+          console.log("ANIMATING CLIPS");
+          console.log(waveClip);
+          action.play(); 
+        }
+        if (model.name === "miffy-pickup") {
+          console.log("IN IF");
+          miffyPickup(object, gltf);
+        }
+        if (model.name === "miffy-holding") {
+          console.log("IN IF");
+          miffyHolding(object, gltf);
+        }
+        if (model.name === "miffy-putdown") {
+          console.log("IN IF");
+          miffyPutdown(object, gltf);
+        }
+        // if (model.name === "ani-sign"){
+        //   scene.add(object);
+        //   signMixer = new THREE.AnimationMixer(gltf.scene);
+        //   const clips = gltf.animations;
+        //   const signClip = THREE.AnimationClip.findByName(clips, 'Action');
+
+        //   const action = signMixer.clipAction(signClip);
+        //   console.log("ANIMATING SIGN");
+        //   console.log(signClip);
+        //   action.play(); 
+        // }
 
         scene.add(object);
         console.log(`${model.name} GLB loaded successfully`);
@@ -164,21 +246,21 @@ function loadGLTFModels(models) {
 const models = [
   {
     name: "baseAndWindow",
-    path: "/assets/base-and-window/base_and_window-transformed.glb",
+    path: "/assets/base&window/base_and_window_transformed.glb",
     position: new THREE.Vector3(0, 0, 0),
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(1, 1, 1),
   },
   {
     name: "table",
-    path: "/assets/long-table/long_table-transformed.glb",
+    path: "/assets/long-table/long-table-transformed.glb",
     position: new THREE.Vector3(0, 110, -600),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
     scale: new THREE.Vector3(0.5, 0.5, 0.5),
   },
   {
     name: "smallTable",
-    path: "/assets/small-table/small_table-transformed.glb",
+    path: "/assets/small-table/small-table-transformed.glb",
     position: new THREE.Vector3(-200, 110, -500),
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
     scale: new THREE.Vector3(0.4, 0.4, 0.4),
@@ -199,25 +281,60 @@ const models = [
   },
   {
     name: "capybara",
-    path: "/assets/capybara/capybara-transformed.glb",
+    path: "/assets/capybara/capy-edited-in-blender-transformed.glb",
     position: new THREE.Vector3(400, 110, 300),
     rotation: new THREE.Euler(),
     scale: new THREE.Vector3(0.3, 0.3, 0.3),
   },
   {
-    name: "miffy",
-    path: "/assets/miffy-glb/miffy-transformed.glb",
-    position: new THREE.Vector3(-200, 60, -400),
+    name: "miffy-wave",
+    path: "/assets/miffy-animation/miffy-wave3-transformed.glb",
+    position: new THREE.Vector3(-200, 110, -400),
     rotation: new THREE.Euler(0, Math.PI / 6, 0),
-    scale: new THREE.Vector3(1.2, 1.2, 1.2),
+    scale: new THREE.Vector3(3, 3, 3),
   },
   {
-    name: "star",
-    path: "/assets/star/star-transformed.glb",
-    position: new THREE.Vector3(0, 900, -400),
-    rotation: new THREE.Euler(0, Math.PI / 4, 0),
-    scale: new THREE.Vector3(1, 1, 1),
+    name: "miffy-pickup",
+    path: "/assets/miffy-animation/miffy_pickup_and_putdown-transformed.glb",
+    position: new THREE.Vector3(0, 110, -400),
+    rotation: new THREE.Euler(0, Math.PI / 6, 0),
+    scale: new THREE.Vector3(3, 3, 3),
   },
+  {
+    name: "miffy-holding",
+    path: "/assets/miffy-animation/miffy_pickup_and_putdown-transformed.glb",
+    position: new THREE.Vector3(200, 110, -400),
+    rotation: new THREE.Euler(0, Math.PI / 6, 0),
+    scale: new THREE.Vector3(3, 3, 3),
+  },
+  {
+    name: "miffy-putdown",
+    path: "/assets/miffy-animation/miffy_pickup_and_putdown-transformed.glb",
+    position: new THREE.Vector3(400, 110, -400),
+    rotation: new THREE.Euler(0, Math.PI / 6, 0),
+    scale: new THREE.Vector3(3, 3, 3),
+  },
+  // {
+  //   name: "star",
+  //   path: "/assets/star/star-transformed.glb",
+  //   position: new THREE.Vector3(0, 900, -400),
+  //   rotation: new THREE.Euler(0, Math.PI / 4, 0),
+  //   scale: new THREE.Vector3(1, 1, 1),
+  // },
+  {
+    name: "sign",
+    path: "/assets/sign/textured-sign.glb",
+    position: new THREE.Vector3(-400, 550, -880),
+    rotation: new THREE.Euler(0, Math.PI/2, 0),
+    scale: new THREE.Vector3(5, 5, 5),
+  },
+  // {
+  //   name: "ani-sign",
+  //   path: "/assets/sign-animation-test/sign-animation-combined2-transformed.glb",
+  //   position: new THREE.Vector3(0, 300, 80),
+  //   rotation: new THREE.Euler(0, Math.PI/2, 0),
+  //   scale: new THREE.Vector3(10, 10, 10),
+  // },
 ];
 
 loadGLTFModels(models);
@@ -226,13 +343,33 @@ loadGLTFModels(models);
 const stats = new Stats();
 document.body.appendChild(stats.dom);
 
+const clock = new THREE.Clock();
+
 function animate() {
+  const delta = clock.getDelta();
+
+  if (miffyWaveMixer) {
+    miffyWaveMixer.update(delta);
+  }
+  if (miffyPickupMixer) {
+    miffyPickupMixer.update(delta);
+  }
+  if (miffyHoldingMixer) {
+    miffyHoldingMixer.update(delta);
+  }
+  if (miffyPutdownMixer) {
+    miffyPutdownMixer.update(delta);
+  }  
+  // if (signMixer) {
+  //   signMixer.update(delta);
+  // }
+
   controls.update();
   renderer.render(scene, camera);
   stats.update(); // FOR FPS MONITORING
 }
 
-FPS = 60;
+const FPS = 60;
 setTimeout(() => {
   requestAnimationFrame(animate);
   animate();
