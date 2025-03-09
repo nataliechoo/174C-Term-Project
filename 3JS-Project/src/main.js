@@ -4,6 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import Stats from "three/examples/jsm/libs/stats.module"; // FOR FPS MONITORING
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import "./style.css";
+import { bspline_interpolate } from "./b-spline.js"
 
 THREE.Cache.enabled = true;
 const scene = new THREE.Scene();
@@ -338,6 +339,46 @@ const models = [
 ];
 
 loadGLTFModels(models);
+
+
+// Visual-mode for camera path
+// NOTE: If you want the b-spline to connect to the end points, duplicate them at beginning and end! :D
+const controlPoints = [
+  [-500, 500, 250],
+  [-500, 500, 250],
+  [-250, 500, 0],
+  [0, 500, 0],
+  [250, 500, 0],
+  [500, 250, -250],
+  [500, 250, -250]
+];
+
+// DRAW SPHERE FOR EACH CONTROL POINT (better visualization)
+controlPoints.forEach(point => {
+  const sphereGeometry = new THREE.SphereGeometry(2, 16, 16);
+  const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+  const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+  sphere.position.set(point[0], point[1], point[2]);
+  scene.add(sphere); // comment to disable visual
+});
+
+const degree = 2; // Degree of the B-spline
+const numCurvePoints = 100; // Number of points along the curve
+const curvePoints = [];
+
+// sample curve t = [0,1]
+for (let i = 0; i <= numCurvePoints; i++) {
+  let t = i / numCurvePoints;
+  const point = bspline_interpolate(t, degree, controlPoints);
+  curvePoints.push(new THREE.Vector3(point[0], point[1], point[2]));
+}
+
+const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+const curveLine = new THREE.Line(geometry, material);
+scene.add(curveLine); // comment to disable visual
+
+
 
 // FOR FPS MONITORING
 const stats = new Stats();
