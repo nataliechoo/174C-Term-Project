@@ -430,6 +430,27 @@ const clock = new THREE.Clock();
 
 function animate() {
   const delta = clock.getDelta();
+  const elapsedTime = clock.getElapsedTime();
+
+  
+
+  if (!cameraToggle) {
+    controls.update();
+  } else {
+    // Camera mode: Move camera along b-spline.
+    const duration = 10; // Duration (in seconds) for a full traversal along the spline.
+    let t = (elapsedTime % duration) / duration;
+    
+    // get  new camera pos along the spline.
+    const pos = bspline_interpolate(t, degree, controlPoints);
+    camera.position.set(pos[0], pos[1], pos[2]);
+    
+    // compute a look-ahead point so the camera faces forward.
+    const lookAheadOffset = 0.1; // Adjust this offset as needed.
+    let nextT = ((elapsedTime + lookAheadOffset) % duration) / duration;
+    const nextPos = bspline_interpolate(nextT, degree, controlPoints);
+    camera.lookAt(new THREE.Vector3(nextPos[0], nextPos[1], nextPos[2]));
+  }
 
   if (miffyWaveMixer) {
     miffyWaveMixer.update(delta);
@@ -453,7 +474,7 @@ function animate() {
     doorOpenMixer.update(delta);
   }
 
-  controls.update();
+
   renderer.render(scene, camera);
   stats.update(); // FOR FPS MONITORING
 }
