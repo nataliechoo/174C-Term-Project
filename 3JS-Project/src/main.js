@@ -36,6 +36,10 @@ let miffyPickupMixer;
 let miffyHoldingMixer;
 let miffyPutdownMixer;
 let cloudMixer;
+let ovenOpenMixer;
+let ovenCloseMixer;
+let doorOpenMixer;
+
 
 // lighting
 var keyLight = new THREE.DirectionalLight(
@@ -162,6 +166,30 @@ function cloudAnimation(object, gltf){
   action.play(); 
 }
 
+function ovenOpen(object, gltf){
+  scene.add(object);
+  ovenOpenMixer = new THREE.AnimationMixer(object);
+  const clips = gltf.animations;
+  const open = THREE.AnimationClip.findByName(clips, 'open');
+
+  const action = ovenOpenMixer.clipAction(open);
+  console.log("ANIMATING OVEN OPENING CLIP");
+  console.log(open);
+  action.play(); 
+}
+
+function doorOpen(object, gltf){
+  scene.add(object);
+  doorOpenMixer = new THREE.AnimationMixer(object);
+  const clips = gltf.animations;
+  const open = THREE.AnimationClip.findByName(clips, 'open');
+
+  const action = doorOpenMixer.clipAction(open);
+  console.log("ANIMATING OVEN OPENING CLIP");
+  console.log(open);
+  action.play(); 
+}
+
 function loadGLTFModels(models) {
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
@@ -225,6 +253,12 @@ function loadGLTFModels(models) {
         if (model.name === "cloud") {
           cloudAnimation(object, gltf);
         }
+        if (model.name === "oven") {
+          ovenOpen(object, gltf);
+        }
+        if (model.name === "base") {
+          doorOpen(object, gltf);
+        }
 
         scene.add(object);
         console.log(`${model.name} GLB loaded successfully`);
@@ -239,9 +273,16 @@ function loadGLTFModels(models) {
 
 const models = [
   {
-    name: "baseAndWindow",
-    path: "/assets/base&window/colored-base-transformed.glb",
-    position: new THREE.Vector3(0, 0, 0),
+    name: "base",
+    path: "/assets/new-base/base-transformed.glb",
+    position: new THREE.Vector3(-300, 0, 0),
+    rotation: new THREE.Euler(0, Math.PI, 0),
+    scale: new THREE.Vector3(3, 3, 3),
+  },
+  {
+    name: "oven",
+    path: "/assets/oven/oven-transformed.glb",
+    position: new THREE.Vector3(-500, 265, -500),
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(1, 1, 1),
   },
@@ -254,7 +295,7 @@ const models = [
   },
   {
     name: "smallTable",
-    path: "/assets/small-table/small-table-transformed.glb",
+    path: "/assets/small-table/small-table-transformed-transformed.glb",
     position: new THREE.Vector3(-200, 110, -500),
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
     scale: new THREE.Vector3(0.4, 0.4, 0.4),
@@ -317,7 +358,7 @@ const models = [
   // },
   {
     name: "sign",
-    path: "/assets/sign/textured-sign.glb",
+    path: "/assets/sign/textured-sign-transformed.glb",
     position: new THREE.Vector3(-400, 550, -880),
     rotation: new THREE.Euler(0, Math.PI/2, 0),
     scale: new THREE.Vector3(5, 5, 5),
@@ -403,6 +444,12 @@ function animate() {
   }  
   if (cloudMixer) {
     cloudMixer.update(delta);
+  }
+  if (ovenOpenMixer) {
+    ovenOpenMixer.update(delta);
+  }
+  if (doorOpenMixer) {
+    doorOpenMixer.update(delta);
   }
 
   controls.update();
