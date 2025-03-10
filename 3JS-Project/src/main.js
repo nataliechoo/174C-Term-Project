@@ -3,8 +3,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import Stats from "three/examples/jsm/libs/stats.module"; // FOR FPS MONITORING
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
-import "./style.css";
+import "./styles.css";
 import { bspline_interpolate } from "./b-spline.js"
+import { cameraToggle } from './index.js';
 
 THREE.Cache.enabled = true;
 const scene = new THREE.Scene();
