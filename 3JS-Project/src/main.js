@@ -35,7 +35,7 @@ let miffyWaveMixer;
 let miffyPickupMixer;
 let miffyHoldingMixer;
 let miffyPutdownMixer;
-// let signMixer;
+let cloudMixer;
 
 // lighting
 var keyLight = new THREE.DirectionalLight(
@@ -74,17 +74,17 @@ function applyTeapotMaterial(mesh) {
   mesh.material.needsUpdate = true;
 }
 
-function applyCapybaraMaterial(mesh, index) {
+function applyMoonMesh(mesh, index) {
   const textureLoader = new THREE.TextureLoader();
 
   // load textures based on the mesh index
-  const colorMap = textureLoader.load(`/assets/capybara/model_${index}_color.png`);
-  const normalMap = textureLoader.load(`/assets/capybara/model_${index}_normal.png`);
-  const roughnessMap = textureLoader.load(`/assets/capybara/model_${index}_roughness.png`);
-  const transmittanceMap = textureLoader.load(`/assets/capybara/model_${index}_transmittance.png`);
+  const colorMap = textureLoader.load(`/assets/moon/model_${index}_color.png`);
+  const normalMap = textureLoader.load(`/assets/moon/model_${index}_normal.png`);
+  const roughnessMap = textureLoader.load(`/assets/moon/model_${index}_roughness.png`);
+  const transmittanceMap = textureLoader.load(`/assets/moon/model_${index}_transmittance.png`);
 
   // for some reason, the glb refers to it as metallicRoughness despite the womp exporting it as metallic
-  const metallicMap = textureLoader.load(`/assets/capybara/model_${index}_metallicRoughness.png`);
+  const metallicMap = textureLoader.load(`/assets/moon/model_${index}_metallicRoughness.png`);
 
   // Ensure the material is MeshPhysicalMaterial (supports transmittance)
   if (!(mesh.material instanceof THREE.MeshPhysicalMaterial)) {
@@ -103,15 +103,12 @@ function applyCapybaraMaterial(mesh, index) {
   mesh.material.roughness = 1.0; 
   mesh.material.transmission = 0.5; 
 
-  // make the snot shiny
-  if (index === 3)
-  {
-    // Set material properties for translucency and glossiness
-    mesh.material.transmission = 1.0; 
-    mesh.material.clearcoat = 1.0; 
-    mesh.material.clearcoatRoughness = 0.01; 
-    mesh.material.ior = 2.5; 
-  }
+
+  // Set material properties for translucency and glossiness
+  mesh.material.transmission = 1.0; 
+  mesh.material.clearcoat = 1.0; 
+  mesh.material.clearcoatRoughness = 0.01; 
+  mesh.material.ior = 2.5; 
 
   // Ensure the material updates
   mesh.material.needsUpdate = true;
@@ -153,6 +150,18 @@ function miffyPutdown(object, gltf){
   action.play(); 
 }
 
+function cloudAnimation(object, gltf){
+  scene.add(object);
+  cloudMixer = new THREE.AnimationMixer(object);
+  const clips = gltf.animations;
+  const cloudMovement = THREE.AnimationClip.findByName(clips, 'cloudMovement');
+
+  const action = cloudMixer.clipAction(cloudMovement);
+  console.log("ANIMATING CLOUD CLIP");
+  console.log(cloudMovement);
+  action.play(); 
+}
+
 function loadGLTFModels(models) {
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
@@ -184,17 +193,12 @@ function loadGLTFModels(models) {
             }
           });
         }
-        if (model.name === "capybara") {
+        if (model.name === "moon") {
           let meshIndex = 0;
           object.traverse((node) => {
             if (node.isMesh) {
               const mesh = node;
-
-              // Apply capybara material properties and textures
-              // applyCapybaraMaterial(mesh, meshIndex);
-
-              // Increment the mesh index for the next mesh
-              meshIndex++;
+              applyMoonMesh(mesh);
             }
           });
         }
@@ -202,7 +206,7 @@ function loadGLTFModels(models) {
           scene.add(object);
           miffyWaveMixer = new THREE.AnimationMixer(gltf.scene);
           const clips = gltf.animations;
-          const waveClip = THREE.AnimationClip.findByName(clips, 'Waving');
+          const waveClip = THREE.AnimationClip.findByName(clips, 'waving');
 
           const action = miffyWaveMixer.clipAction(waveClip);
           console.log("ANIMATING CLIPS");
@@ -210,28 +214,17 @@ function loadGLTFModels(models) {
           action.play(); 
         }
         if (model.name === "miffy-pickup") {
-          console.log("IN IF");
           miffyPickup(object, gltf);
         }
         if (model.name === "miffy-holding") {
-          console.log("IN IF");
           miffyHolding(object, gltf);
         }
         if (model.name === "miffy-putdown") {
-          console.log("IN IF");
           miffyPutdown(object, gltf);
         }
-        // if (model.name === "ani-sign"){
-        //   scene.add(object);
-        //   signMixer = new THREE.AnimationMixer(gltf.scene);
-        //   const clips = gltf.animations;
-        //   const signClip = THREE.AnimationClip.findByName(clips, 'Action');
-
-        //   const action = signMixer.clipAction(signClip);
-        //   console.log("ANIMATING SIGN");
-        //   console.log(signClip);
-        //   action.play(); 
-        // }
+        if (model.name === "cloud") {
+          cloudAnimation(object, gltf);
+        }
 
         scene.add(object);
         console.log(`${model.name} GLB loaded successfully`);
@@ -247,7 +240,7 @@ function loadGLTFModels(models) {
 const models = [
   {
     name: "baseAndWindow",
-    path: "/assets/base&window/base_and_window_transformed.glb",
+    path: "/assets/base&window/colored-base-transformed.glb",
     position: new THREE.Vector3(0, 0, 0),
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(1, 1, 1),
@@ -289,7 +282,7 @@ const models = [
   },
   {
     name: "miffy-wave",
-    path: "/assets/miffy-animation/miffy-wave3-transformed.glb",
+    path: "/assets/miffy-animation/miffy-wave-fixed-arms-transformed.glb",
     position: new THREE.Vector3(-200, 110, -400),
     rotation: new THREE.Euler(0, Math.PI / 6, 0),
     scale: new THREE.Vector3(3, 3, 3),
@@ -329,13 +322,20 @@ const models = [
     rotation: new THREE.Euler(0, Math.PI/2, 0),
     scale: new THREE.Vector3(5, 5, 5),
   },
-  // {
-  //   name: "ani-sign",
-  //   path: "/assets/sign-animation-test/sign-animation-combined2-transformed.glb",
-  //   position: new THREE.Vector3(0, 300, 80),
-  //   rotation: new THREE.Euler(0, Math.PI/2, 0),
-  //   scale: new THREE.Vector3(10, 10, 10),
-  // },
+  {
+    name: "cloud",
+    path: "/assets/cloud-animation/cloud2-transformed.glb",
+    position: new THREE.Vector3(0, 300, -5000),
+    rotation: new THREE.Euler(0, Math.PI, 0),
+    scale: new THREE.Vector3(5, 5, 5),
+  },
+  {
+    name: "moon",
+    path: "/assets/moon/moon-transformed.glb",
+    position: new THREE.Vector3(0, 300, -5000),
+    rotation: new THREE.Euler(0, Math.PI, 0),
+    scale: new THREE.Vector3(5, 5, 5),
+  },
 ];
 
 loadGLTFModels(models);
@@ -401,9 +401,9 @@ function animate() {
   if (miffyPutdownMixer) {
     miffyPutdownMixer.update(delta);
   }  
-  // if (signMixer) {
-  //   signMixer.update(delta);
-  // }
+  if (cloudMixer) {
+    cloudMixer.update(delta);
+  }
 
   controls.update();
   renderer.render(scene, camera);
