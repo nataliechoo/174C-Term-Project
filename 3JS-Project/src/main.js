@@ -6,6 +6,7 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import "./styles.css";
 import { bspline_interpolate } from "./b-spline.js"
 import { cameraToggle } from './index.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'; // Allowed since comes with three.js
 
 THREE.Cache.enabled = true;
 const scene = new THREE.Scene();
@@ -21,15 +22,21 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 200, 1000);
 camera.lookAt(0, 500, 0);
 
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setAnimationLoop(animate);
 renderer.setSize(window.innerWidth, window.innerHeight);
+
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.25;
 controls.enableZoom = true;
+
+const clock = new THREE.Clock()
 
 //global for animating!
 let miffyWaveMixer;
@@ -60,6 +67,23 @@ scene.add(fillLight);
 var backLight = new THREE.DirectionalLight(0xffffff, 2.0);
 backLight.position.set(100, 100, -100);
 scene.add(backLight);
+
+// Key lighting shadows enabled
+keyLight.castShadow = true;
+fillLight.castShadow = true;
+backLight.castShadow = true;
+
+// Increase shadow map size for better quality
+keyLight.shadow.mapSize.width = 4096;
+keyLight.shadow.mapSize.height = 4096;
+
+// == HDR LIGHTING == (If you disable this, increase tonemapping to 1.2)
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+
+// == Tone Mapping == 
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.5; // == LOWER THIS TO DECREASE HOW BRIGHT/WHITE EVERYTHING IS
 
 function applyTeapotMaterial(mesh) {
   // load externals
@@ -426,13 +450,9 @@ scene.add(curveLine); // comment to disable visual
 const stats = new Stats();
 document.body.appendChild(stats.dom);
 
-const clock = new THREE.Clock();
-
 function animate() {
   const delta = clock.getDelta();
   const elapsedTime = clock.getElapsedTime();
-
-  
 
   if (!cameraToggle) {
     controls.update();
