@@ -8,8 +8,9 @@ import { bspline_interpolate } from "./b-spline.js"
 import { cameraToggle } from './index.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'; // Allowed since comes with three.js
 
+
 THREE.Cache.enabled = true;
-const scene = new THREE.Scene();
+export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb); // Light blue sky
 
 const camera = new THREE.PerspectiveCamera(
@@ -444,6 +445,48 @@ const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
 const curveLine = new THREE.Line(geometry, material);
 scene.add(curveLine); // comment to disable visual
 
+
+// == STAR TWINKLE ANIMATION == //
+const starControlPoints = [
+  [750, 400, -3150],
+  [750, 400, -3150],
+  [300, 500, -3500],
+  [0, 500, -3750],
+  [-200, 600, -4000],
+  [-300, 650, -4250],
+  [-100, 675, -4400],
+  [800, 675, -4250],
+  [800, 675, -4250]
+
+];
+
+// DRAW SPHERE FOR EACH CONTROL POINT (better visualization)
+starControlPoints.forEach(point => {
+  const starSphereGeometry = new THREE.SphereGeometry(10, 16, 16);
+  const starSphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff8800 });
+  const starSphere = new THREE.Mesh(starSphereGeometry, starSphereMaterial);
+  starSphere.position.set(point[0], point[1], point[2]);
+  scene.add(starSphere); // comment to disable visual
+});
+
+const starDegree = 2; // Degree of the B-spline
+const starNumCurvePoints = 100; // Number of points along the curve
+const starCurvePoints = [];
+
+// sample curve t = [0,1]
+for (let i = 0; i <= starNumCurvePoints; i++) {
+  let t = i / starNumCurvePoints;
+  const point = bspline_interpolate(t, starDegree, starControlPoints);
+  starCurvePoints.push(new THREE.Vector3(point[0], point[1], point[2]));
+}
+
+const starGeometry = new THREE.BufferGeometry().setFromPoints(starCurvePoints);
+const starMaterial = new THREE.LineBasicMaterial({ color: 0x0088ff });
+const starCurveLine = new THREE.Line(starGeometry, starMaterial);
+scene.add(starCurveLine); // comment to disable visual
+
+
+console.log("Spline and control points added to scene");
 
 
 // FOR FPS MONITORING
