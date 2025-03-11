@@ -450,6 +450,29 @@ scene.add(curveLine); // comment to disable visual
 const stats = new Stats();
 document.body.appendChild(stats.dom);
 
+// FOR MOVEMENT (good for visual editing)
+document.addEventListener("keydown", (event) => {
+  const moveSpeed = 40; 
+
+  // get camera curr forward direction
+  const forward = new THREE.Vector3();
+  camera.getWorldDirection(forward);
+
+  // comptue left vector as cross product of camera.up and forward
+  const left = new THREE.Vector3().crossVectors(camera.up, forward).normalize();
+
+  // move left (add left vector)
+  if (event.key.toLowerCase() === "a") {
+    camera.position.addScaledVector(left, moveSpeed);
+    controls.target.addScaledVector(left, moveSpeed);
+  }
+  // move right (subtract left vector)
+  else if (event.key.toLowerCase() === "d") {
+    camera.position.addScaledVector(left, -moveSpeed);
+    controls.target.addScaledVector(left, -moveSpeed);
+  }
+});
+
 function animate() {
   const delta = clock.getDelta();
   const elapsedTime = clock.getElapsedTime();
