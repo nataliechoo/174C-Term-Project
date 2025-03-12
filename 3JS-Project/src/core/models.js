@@ -6,7 +6,8 @@ import { applyTeapotMaterial, applyMoonMesh, applyCapybaraMaterial } from "./mat
 import { 
   miffyPickup, 
   miffyHolding, 
-  miffyPutdown, 
+  miffyPutdown,
+  miffyBarista,
   cloudAnimation, 
   ovenOpen, 
   doorOpen,
