@@ -169,7 +169,7 @@ function animate() {
   updateStarPath(elapsedTime);
   
   // Update all animation mixers
-  updateAnimations(delta);
+  updateAnimations(delta, elapsedTime);
 
   // Render the scene
   renderer.render(scene, camera);

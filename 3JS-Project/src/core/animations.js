@@ -16,14 +16,21 @@ export let doorOpenMixer;
 export function setupMiffyWave(object, gltf) {
   scene.add(object);
   miffyWaveMixer = new THREE.AnimationMixer(gltf.scene);
+  mixers.push(miffyWaveMixer);
   const clips = gltf.animations;
   const waveClip = THREE.AnimationClip.findByName(clips, 'waving');
 
   if (waveClip) {
     const action = miffyWaveMixer.clipAction(waveClip);
-    action.setLoop(THREE.LoopRepeat); // Ensure it loops
-    action.play();
-    console.log("Cashier Miffy is waving!");
+    action.setLoop(THREE.LoopRepeat);
+    action.stop(); // Don't play immediately
+
+    // Store animation controls in object data
+    object.userData.waveAction = action;
+    object.userData.waveStartTime = 15; // Start at 15 seconds
+    object.userData.waveStarted = false;
+
+    console.log("Cashier Miffy wave animation ready");
   } else {
     console.warn("Waving animation not found for Cashier Miffy");
   }
@@ -38,13 +45,13 @@ export function miffyPickup(object, gltf) {
   const clips = gltf.animations;
   const pickupClip = THREE.AnimationClip.findByName(clips, 'pickup');
 
-  
+
   if (pickupClip) {
     const action = miffyPickupMixer.clipAction(pickupClip);
     action.setLoop(THREE.LoopOnce);
     action.clampWhenFinished = true;
     action.play();
-    console.log("Barista Miffy is picking up!");
+    // console.log("Barista Miffy is picking up!");
 
     // Attach tray to Miffy's hand
     setTimeout(() => {
@@ -65,7 +72,7 @@ export function miffyBarista(object, gltf) {
   scene.add(object);
   miffyPickupMixer = new THREE.AnimationMixer(object);
   const clips = gltf.animations;
-  
+
   // Find animations
   const pickupClip = THREE.AnimationClip.findByName(clips, 'pickup');
   const putdownClip = THREE.AnimationClip.findByName(clips, 'putdown');
@@ -94,7 +101,7 @@ export function miffyHolding(object, gltf) {
   const action = miffyHoldingMixer.clipAction(holdingClip);
   console.log("ANIMATING HOLDING CLIP");
   console.log(holdingClip);
-  action.play(); 
+  action.play();
 }
 
 /**
@@ -109,7 +116,7 @@ export function miffyPutdown(object, gltf) {
   const action = miffyPutdownMixer.clipAction(putdownClip);
   console.log("ANIMATING PUTDOWN CLIP");
   console.log(putdownClip);
-  action.play(); 
+  action.play();
 }
 
 /**
@@ -124,7 +131,7 @@ export function cloudAnimation(object, gltf) {
   const action = cloudMixer.clipAction(cloudMovement);
   console.log("ANIMATING CLOUD CLIP");
   console.log(cloudMovement);
-  action.play(); 
+  action.play();
 }
 
 /**
@@ -139,7 +146,7 @@ export function ovenOpen(object, gltf) {
   const action = ovenOpenMixer.clipAction(open);
   console.log("ANIMATING OVEN OPENING CLIP");
   console.log(open);
-  action.play(); 
+  action.play();
 }
 
 /**
@@ -154,33 +161,81 @@ export function doorOpen(object, gltf) {
   const action = doorOpenMixer.clipAction(open);
   console.log("ANIMATING DOOR OPENING CLIP");
   console.log(open);
-  action.play(); 
+  action.play();
 }
 
-/**
- * Update all animation mixers
- * @param {number} delta - time delta
- */
-export function updateAnimations(delta) {
-  if (miffyWaveMixer) {
-    miffyWaveMixer.update(delta);
+export const mixers = [];
+
+export function updateAnimations(delta, elapsedTime) {
+  [
+    // Legacy mixers
+    miffyWaveMixer,
+    miffyPickupMixer,
+    miffyHoldingMixer,
+    miffyPutdownMixer,
+    cloudMixer,
+    ovenOpenMixer,
+    doorOpenMixer,
+    ...mixers
+  ].forEach(mixer => {
+    if (mixer) mixer.update(delta);
+  });
+
+  // Capybara movement logic with bobbing
+  const capybara = scene.getObjectByName("capybara");
+  const miffy = scene.getObjectByName("cashier-miffy");
+
+  if (capybara?.userData?.targetPosition) {
+    const { startTime, duration, startPosition, targetPosition } = capybara.userData;
+
+    if (elapsedTime >= startTime) {
+      const progress = Math.min((elapsedTime - startTime) / duration, 1);
+      const newX = THREE.MathUtils.lerp(startPosition.x, targetPosition.x, progress);
+      const newZ = THREE.MathUtils.lerp(startPosition.z, targetPosition.z, progress);
+
+      // Bobbing effect while moving
+      let newY;
+      if (progress < 1) {
+        const bobHeight = 5;
+        const bobFrequency = 10;
+        const bobOffset = Math.sin(elapsedTime * bobFrequency) * bobHeight;
+        newY = THREE.MathUtils.lerp(startPosition.y, targetPosition.y, progress) + bobOffset;
+      } else {
+        newY = targetPosition.y;
+      }
+
+      capybara.position.set(newX, newY, newZ);
+
+      // Start Miffy waving when movement starts
+      if (miffy?.userData?.waveAction && !miffy.userData.waveStarted) {
+        //console.log("Miffy starts waving as Capybara moves!");
+        miffy.userData.waveAction.play();
+        miffy.userData.waveStarted = true;
+      }
+
+      // Stop waving when movement completes
+      if (progress === 1) {
+        //console.log("Capybara reached target position.");
+        capybara.userData.targetPosition = null;
+
+        if (miffy?.userData?.waveAction) {
+          //console.log("Miffy stops waving");
+          miffy.userData.waveAction.stop();
+          miffy.userData.waveStarted = false;
+        }
+      }
+    }
   }
-  if (miffyPickupMixer) {
-    miffyPickupMixer.update(delta);
-  }
-  if (miffyHoldingMixer) {
-    miffyHoldingMixer.update(delta);
-  }
-  if (miffyPutdownMixer) {
-    miffyPutdownMixer.update(delta);
-  }  
-  if (cloudMixer) {
-    cloudMixer.update(delta);
-  }
-  if (ovenOpenMixer) {
-    ovenOpenMixer.update(delta);
-  }
-  if (doorOpenMixer) {
-    doorOpenMixer.update(delta);
-  }
-} 
+}
+
+
+export function configureCapybaraMovement(capybara, config) {
+  capybara.userData.startPosition = config.startPosition;
+  capybara.userData.targetPosition = config.targetPosition;
+  capybara.userData.startTime = config.startTime;
+  capybara.userData.duration = config.duration;
+}
+
+export function configureMiffyWave(miffy, config) {
+  miffy.userData.waveDelay = config.delay;
+}

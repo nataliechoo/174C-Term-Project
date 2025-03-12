@@ -3,17 +3,14 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { scene } from "../main.js";
 import { applyTeapotMaterial, applyMoonMesh, applyCapybaraMaterial } from "./materials.js";
-import { 
-  miffyPickup, 
-  miffyHolding, 
-  miffyPutdown,
+import {
   miffyBarista,
-  cloudAnimation, 
-  ovenOpen, 
+  cloudAnimation,
+  ovenOpen,
   doorOpen,
-  setupMiffyWave
 } from "./animations.js";
 import { SignPhysics } from "../physics/SignPhysics.js";
+import { mixers } from "./animations.js";
 
 // Global object references
 export let starObject = null;
@@ -59,7 +56,7 @@ export const models = [
     position: new THREE.Vector3(420, 110, 90), // New table in front-right area
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
     scale: new THREE.Vector3(0.4, 0.4, 0.4),
-},
+  },
   {
     name: "stool-long-table-1",
     path: "/assets/stool/stool-transformed.glb",
@@ -87,26 +84,26 @@ export const models = [
     position: new THREE.Vector3(120, 150, -350),
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
     scale: new THREE.Vector3(0.8, 0.8, 0.8),
-  },{
+  }, {
     name: "stool-small-table-back-2",
     path: "/assets/stool/stool-transformed.glb",
     position: new THREE.Vector3(250, 150, -500),
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
     scale: new THREE.Vector3(0.8, 0.8, 0.8),
-  },{
+  }, {
     name: "stool-small-table-front-1",
     path: "/assets/stool/stool-transformed.glb",
     position: new THREE.Vector3(250, 150, 550),
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
     scale: new THREE.Vector3(0.8, 0.8, 0.8),
-  },{
+  }, {
     name: "stool-small-table-front-2",
     path: "/assets/stool/stool-transformed.glb",
     position: new THREE.Vector3(-100, 150, 550),
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
     scale: new THREE.Vector3(0.8, 0.8, 0.8),
   },
-    //cup, croissant, donut are relatively positioned to tray (global var)
+  //cup, croissant, donut are relatively positioned to tray (global var)
   {
     name: "donut",
     path: "/assets/donut/donut-transformed.glb",
@@ -152,7 +149,7 @@ export const models = [
   {
     name: "capybara",
     path: "/assets/capybara/capy-edited-in-blender-transformed.glb",
-    position: new THREE.Vector3(-500, 110, 600),
+    position: new THREE.Vector3(-500, 150, 600),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
     scale: new THREE.Vector3(0.4, 0.4, 0.4),
   },
@@ -162,14 +159,14 @@ export const models = [
     position: new THREE.Vector3(-500, 110, -350),
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(3, 3, 3),
-},
-{
+  },
+  {
     name: "cashier-miffy",
     path: "/assets/miffy-animation/miffy-wave-fixed-arms-transformed.glb",
-    position: new THREE.Vector3(-270, 110, -300),
+    position: new THREE.Vector3(-280, 110, -300),
     rotation: new THREE.Euler(0, 0, 0),
     scale: new THREE.Vector3(3, 3, 3),
-},
+  },
   {
     name: "star",
     path: "/assets/star/star-transformed.glb",
@@ -181,7 +178,7 @@ export const models = [
     name: "sign",
     path: "/assets/sign/textured-sign-transformed.glb",
     position: new THREE.Vector3(-400, 550, -880),
-    rotation: new THREE.Euler(0, Math.PI/2, 0),
+    rotation: new THREE.Euler(0, Math.PI / 2, 0),
     scale: new THREE.Vector3(5, 5, 5),
   },
   {
@@ -233,7 +230,7 @@ export function createControls(initCameraMode, cameraModes, currentMode) {
   cameraButton.style.width = "100%";
   cameraButton.style.marginBottom = "10px";
   cameraButton.style.cursor = "pointer";
-  
+
   // Set initial camera button text based on current mode
   if (cameraModes && currentMode !== undefined) {
     switch (currentMode) {
@@ -273,14 +270,14 @@ export function createControls(initCameraMode, cameraModes, currentMode) {
   physicsButton.addEventListener("click", () => {
     if (signPhysics) {
       physicsDebugVisible = !physicsDebugVisible;
-      
+
       // Toggle both debug visualization and bounding box at once
       signPhysics.toggleDebug();
       signPhysics.toggleBoundingBox();
-      
+
       // Update button text
-      physicsButton.textContent = physicsDebugVisible ? 
-        "Hide Physics Visualization" : 
+      physicsButton.textContent = physicsDebugVisible ?
+        "Hide Physics Visualization" :
         "Toggle Physics Visualization";
     }
   });
@@ -307,6 +304,7 @@ export function loadGLTFModels() {
       model.path,
       (gltf) => {
         const object = gltf.scene;
+        object.name = model.name;
         object.position.copy(model.position);
         object.rotation.copy(model.rotation);
         object.scale.copy(model.scale);
@@ -340,9 +338,31 @@ export function loadGLTFModels() {
               applyCapybaraMaterial(node, meshIndex++);
             }
           });
+
+          // Set up movement parameters
+          object.userData.startPosition = object.position.clone();
+          object.userData.targetPosition = new THREE.Vector3(-220, 110, 50);
+          object.userData.startTime = 15; // Start moving after 15 seconds
+          object.userData.duration = 4;
         }
+
         else if (model.name === "cashier-miffy") {
-          setupMiffyWave(object, gltf);
+          const mixer = new THREE.AnimationMixer(object);
+          const clip = THREE.AnimationClip.findByName(gltf.animations, 'waving'); // Use actual clip name
+
+          if (clip) {
+            const action = mixer.clipAction(clip);
+            action.setLoop(THREE.LoopRepeat); // Set looping here
+            action.stop(); // Prevent auto-play
+
+            object.userData.waveAction = action;
+            object.userData.waveStarted = false;
+            mixers.push(mixer);
+
+            //console.log("Cashier Miffy wave animation initialized");
+          } else {
+            //console.warn("Wave animation clip not found for Cashier Miffy");
+          }
         }
         else if (model.name === "barista-miffy") {
           miffyBarista(object, gltf);
