@@ -7,19 +7,31 @@ import "./styles.css";
 import { bspline_interpolate } from "./b-spline.js"
 import { cameraToggle } from './index.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'; // Allowed since comes with three.js
+import { SignPhysics } from "./physics/SignPhysics.js";
 
+// Global constants and settings
+const FPS_LIMIT = 60;
+const TIME_STEP = 1 / FPS_LIMIT;
+
+// Physics objects
+let signObject = null;
+let signPhysics = null;
+
+// Time tracking for physics
+let lastPhysicsTime = 0;
+let accumulatedTime = 0;
 
 THREE.Cache.enabled = true;
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb); // Light blue sky
 
+// Setup camera
 const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
   10000
 );
-
 camera.position.set(0, 200, 1000);
 camera.lookAt(0, 500, 0);
 
@@ -32,6 +44,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 
 document.body.appendChild(renderer.domElement);
 
+// Setup camera controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.25;
@@ -89,6 +102,62 @@ scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).textur
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.5; // == LOWER THIS TO DECREASE HOW BRIGHT/WHITE EVERYTHING IS
 
+// FOR FPS MONITORING
+const stats = new Stats();
+document.body.appendChild(stats.dom);
+
+// Create a simple UI with only debug buttons for sign physics
+function createControls() {
+  const container = document.createElement("div");
+  container.style.position = "absolute";
+  container.style.top = "10px";
+  container.style.right = "10px";
+  container.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+  container.style.padding = "10px";
+  container.style.borderRadius = "5px";
+  container.style.color = "white";
+  container.style.fontFamily = "Arial, sans-serif";
+  container.style.zIndex = "1000";
+
+  const title = document.createElement("div");
+  title.textContent = "Sign Controls";
+  title.style.marginBottom = "10px";
+  title.style.fontWeight = "bold";
+  container.appendChild(title);
+
+  // Debug toggle button
+  const debugButton = document.createElement("button");
+  debugButton.textContent = "Toggle Physics Debug";
+  debugButton.style.padding = "5px";
+  debugButton.style.width = "100%";
+  debugButton.style.marginBottom = "10px";
+  debugButton.style.cursor = "pointer";
+
+  // Bounding box toggle button
+  const boundingBoxButton = document.createElement("button");
+  boundingBoxButton.textContent = "Toggle Bounding Box";
+  boundingBoxButton.style.padding = "5px";
+  boundingBoxButton.style.width = "100%";
+  boundingBoxButton.style.cursor = "pointer";
+
+  container.appendChild(debugButton);
+  container.appendChild(boundingBoxButton);
+  document.body.appendChild(container);
+
+  // Event handlers
+  debugButton.addEventListener("click", () => {
+    if (signPhysics) {
+      signPhysics.toggleDebug();
+    }
+  });
+
+  boundingBoxButton.addEventListener("click", () => {
+    if (signPhysics) {
+      signPhysics.toggleBoundingBox();
+    }
+  });
+}
+
 function applyTeapotMaterial(mesh) {
   // load externals
   const textureLoader = new THREE.TextureLoader();
@@ -142,6 +211,58 @@ function applyMoonMesh(mesh, index) {
   mesh.material.clearcoat = 1.0; 
   mesh.material.clearcoatRoughness = 0.01; 
   mesh.material.ior = 2.5; 
+
+  // Ensure the material updates
+  mesh.material.needsUpdate = true;
+}
+
+function applyCapybaraMaterial(mesh, index) {
+  const textureLoader = new THREE.TextureLoader();
+
+  // load textures based on the mesh index
+  const colorMap = textureLoader.load(
+    `/assets/capybara/model_${index}_color.png`
+  );
+  const normalMap = textureLoader.load(
+    `/assets/capybara/model_${index}_normal.png`
+  );
+  const roughnessMap = textureLoader.load(
+    `/assets/capybara/model_${index}_roughness.png`
+  );
+  const transmittanceMap = textureLoader.load(
+    `/assets/capybara/model_${index}_transmittance.png`
+  );
+
+  // for some reason, the glb refers to it as metallicRoughness despite the womp exporting it as metallic
+  const metallicMap = textureLoader.load(
+    `/assets/capybara/model_${index}_metallicRoughness.png`
+  );
+
+  // Ensure the material is MeshPhysicalMaterial (supports transmittance)
+  if (!(mesh.material instanceof THREE.MeshPhysicalMaterial)) {
+    mesh.material = new THREE.MeshPhysicalMaterial();
+  }
+
+  // apply the maps
+  mesh.material.map = colorMap;
+  mesh.material.metalnessMap = metallicMap;
+  mesh.material.normalMap = normalMap;
+  mesh.material.roughnessMap = roughnessMap;
+  mesh.material.transmissionMap = transmittanceMap;
+
+  // set material properties
+  mesh.material.metalness = 1.0;
+  mesh.material.roughness = 1.0;
+  mesh.material.transmission = 0.5;
+
+  // make the snot shiny
+  if (index === 3) {
+    // Set material properties for translucency and glossiness
+    mesh.material.transmission = 1.0;
+    mesh.material.clearcoat = 1.0;
+    mesh.material.clearcoatRoughness = 0.01;
+    mesh.material.ior = 2.5;
+  }
 
   // Ensure the material updates
   mesh.material.needsUpdate = true;
@@ -219,6 +340,45 @@ function doorOpen(object, gltf){
   action.play(); 
 }
 
+// Keyboard shortcuts
+function setupKeyboardShortcuts() {
+  window.addEventListener("keydown", (event) => {
+    const moveSpeed = 40; 
+
+    // get camera curr forward direction
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+
+    // comptue left vector as cross product of camera.up and forward
+    const left = new THREE.Vector3().crossVectors(camera.up, forward).normalize();
+
+    // move left (add left vector)
+    if (event.key.toLowerCase() === "a") {
+      camera.position.addScaledVector(left, moveSpeed);
+      controls.target.addScaledVector(left, moveSpeed);
+    }
+    // move right (subtract left vector)
+    else if (event.key.toLowerCase() === "d") {
+      camera.position.addScaledVector(left, -moveSpeed);
+      controls.target.addScaledVector(left, -moveSpeed);
+    }
+    
+    // 'D' to toggle debug visualization (physics)
+    if (event.key === "d" || event.key === "D") {
+      if (signPhysics) {
+        signPhysics.toggleDebug();
+      }
+    }
+
+    // 'B' to toggle bounding box (physics)
+    if (event.key === "b" || event.key === "B") {
+      if (signPhysics) {
+        signPhysics.toggleBoundingBox();
+      }
+    }
+  });
+}
+
 function loadGLTFModels(models) {
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
@@ -240,26 +400,32 @@ function loadGLTFModels(models) {
           }
         });
 
+        // Apply special materials if needed
         if (model.name === "teapot") {
           object.traverse((node) => {
             if (node.isMesh) {
-              const mesh = node;
-
-              //apply teapot materials
-              applyTeapotMaterial(mesh);
+              applyTeapotMaterial(node);
             }
           });
         }
-        if (model.name === "moon") {
+        else if (model.name === "moon") {
           let meshIndex = 0;
           object.traverse((node) => {
             if (node.isMesh) {
               const mesh = node;
-              applyMoonMesh(mesh);
+              applyMoonMesh(mesh, meshIndex++);
             }
           });
         }
-        if (model.name === "miffy-wave") {
+        else if (model.name === "capybara") {
+          let meshIndex = 0;
+          object.traverse((node) => {
+            if (node.isMesh) {
+              applyCapybaraMaterial(node, meshIndex++);
+            }
+          });
+        }
+        else if (model.name === "miffy-wave") {
           scene.add(object);
           miffyWaveMixer = new THREE.AnimationMixer(gltf.scene);
           const clips = gltf.animations;
@@ -270,39 +436,52 @@ function loadGLTFModels(models) {
           console.log(waveClip);
           action.play(); 
         }
-        if (model.name === "miffy-pickup") {
+        else if (model.name === "miffy-pickup") {
           miffyPickup(object, gltf);
         }
-        if (model.name === "miffy-holding") {
+        else if (model.name === "miffy-holding") {
           miffyHolding(object, gltf);
         }
-        if (model.name === "miffy-putdown") {
+        else if (model.name === "miffy-putdown") {
           miffyPutdown(object, gltf);
         }
-        if (model.name === "cloud") {
+        else if (model.name === "cloud") {
           cloudAnimation(object, gltf);
         }
-        if (model.name === "oven") {
+        else if (model.name === "oven") {
           ovenOpen(object, gltf);
         }
-        if (model.name === "base") {
+        else if (model.name === "base") {
           doorOpen(object, gltf);
         }
-        if (model.name === "star") {
+        else if (model.name === "star") {
           starObject = object;
+        }
+        else if (model.name === "sign") {
+          signObject = object;
+
+          // Create and initialize sign physics
+          signPhysics = new SignPhysics(scene);
+
+          // Use a slight delay to ensure the model is properly positioned
+          setTimeout(() => {
+            signPhysics.init(signObject);
+            createControls();
+          }, 100);
         }
 
         scene.add(object);
-        console.log(`${model.name} GLB loaded successfully`);
+        console.log(`${model.name} loaded successfully`);
       },
       undefined,
       (err) => {
-        console.error(`Error loading ${model.name} GLB:`, err);
+        console.error(`Error loading ${model.name}:`, err);
       }
     );
   });
 }
 
+// Model definitions
 const models = [
   {
     name: "base",
@@ -447,8 +626,9 @@ const models = [
   },
 ];
 
+// Initialize
+setupKeyboardShortcuts();
 loadGLTFModels(models);
-
 
 // Visual-mode for camera path
 // NOTE: If you want the b-spline to connect to the end points, duplicate them at beginning and end! :D
@@ -499,7 +679,6 @@ const starControlPoints = [
   [-100, 675, -4400],
   [800, 675, -4250],
   [800, 675, -4250]
-
 ];
 
 // DRAW SPHERE FOR EACH CONTROL POINT (better visualization)
@@ -527,40 +706,28 @@ const starMaterial = new THREE.LineBasicMaterial({ color: 0x0088ff });
 const starCurveLine = new THREE.Line(starGeometry, starMaterial);
 scene.add(starCurveLine); // comment to disable visual
 
-
 console.log("Spline and control points added to scene");
 
-
-// FOR FPS MONITORING
-const stats = new Stats();
-document.body.appendChild(stats.dom);
-
-// FOR MOVEMENT (good for visual editing)
-document.addEventListener("keydown", (event) => {
-  const moveSpeed = 40; 
-
-  // get camera curr forward direction
-  const forward = new THREE.Vector3();
-  camera.getWorldDirection(forward);
-
-  // comptue left vector as cross product of camera.up and forward
-  const left = new THREE.Vector3().crossVectors(camera.up, forward).normalize();
-
-  // move left (add left vector)
-  if (event.key.toLowerCase() === "a") {
-    camera.position.addScaledVector(left, moveSpeed);
-    controls.target.addScaledVector(left, moveSpeed);
-  }
-  // move right (subtract left vector)
-  else if (event.key.toLowerCase() === "d") {
-    camera.position.addScaledVector(left, -moveSpeed);
-    controls.target.addScaledVector(left, -moveSpeed);
-  }
-});
-
+// Combined animation function
 function animate() {
   const delta = clock.getDelta();
   const elapsedTime = clock.getElapsedTime();
+  const currentTime = performance.now();
+  
+  // Calculate physics delta time (clamped to avoid large jumps)
+  const physicsDeltaTime = Math.min((currentTime - lastPhysicsTime) / 1000, 0.1);
+  lastPhysicsTime = currentTime;
+
+  // Accumulate time for fixed-step physics
+  accumulatedTime += physicsDeltaTime;
+
+  // Update physics with fixed time step
+  while (accumulatedTime >= TIME_STEP) {
+    if (signPhysics && signPhysics.initialized) {
+      signPhysics.update(TIME_STEP);
+    }
+    accumulatedTime -= TIME_STEP;
+  }
 
   if (!cameraToggle) {
     controls.update();
@@ -569,7 +736,7 @@ function animate() {
     const duration = 10; // Duration (in seconds) for a full traversal along the spline.
     let t = (elapsedTime % duration) / duration;
     
-    // get  new camera pos along the spline.
+    // get new camera pos along the spline.
     const pos = bspline_interpolate(t, degree, controlPoints);
     camera.position.set(pos[0], pos[1], pos[2]);
     
@@ -611,12 +778,13 @@ function animate() {
     doorOpenMixer.update(delta);
   }
 
-
   renderer.render(scene, camera);
   stats.update(); // FOR FPS MONITORING
 }
 
+// Start animation loop
 const FPS = 60;
+lastPhysicsTime = performance.now();
 setTimeout(() => {
   requestAnimationFrame(animate);
   animate();
