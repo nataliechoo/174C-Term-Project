@@ -268,17 +268,31 @@ function applyCapybaraMaterial(mesh, index) {
   mesh.material.needsUpdate = true;
 }
 
-function miffyPickup(object, gltf){
+function miffyPickup(object, gltf) {
   scene.add(object);
   miffyPickupMixer = new THREE.AnimationMixer(object);
   const clips = gltf.animations;
   const pickupClip = THREE.AnimationClip.findByName(clips, 'pickup');
 
-  const action = miffyPickupMixer.clipAction(pickupClip);
-  console.log("ANIMATING PICKUP CLIP");
-  console.log(pickupClip);
-  action.play(); 
+  if (pickupClip) {
+    const action = miffyPickupMixer.clipAction(pickupClip);
+    action.setLoop(THREE.LoopOnce);
+    action.clampWhenFinished = true;
+    action.play();
+    console.log("Barista Miffy is picking up!");
+
+    // Attach tray to Miffy's hand
+    setTimeout(() => {
+      const handBone = object.getObjectByName("hand_r"); // Adjust based on your model
+      if (handBone && trayObject) {
+        handBone.add(trayObject);
+        trayObject.position.set(0, 10, 0); // Adjust tray position relative to hand
+        console.log("Tray attached to Miffy's hand!");
+      }
+    }, 500); // Delay to match pickup timing
+  }
 }
+
 
 function miffyHolding(object, gltf){
   scene.add(object);
@@ -425,26 +439,41 @@ function loadGLTFModels(models) {
             }
           });
         }
-        else if (model.name === "miffy-wave") {
+        else if (model.name === "cashier-miffy") {
           scene.add(object);
           miffyWaveMixer = new THREE.AnimationMixer(gltf.scene);
           const clips = gltf.animations;
           const waveClip = THREE.AnimationClip.findByName(clips, 'waving');
-
-          const action = miffyWaveMixer.clipAction(waveClip);
-          console.log("ANIMATING CLIPS");
-          console.log(waveClip);
-          action.play(); 
-        }
-        else if (model.name === "miffy-pickup") {
-          miffyPickup(object, gltf);
-        }
-        else if (model.name === "miffy-holding") {
-          miffyHolding(object, gltf);
-        }
-        else if (model.name === "miffy-putdown") {
-          miffyPutdown(object, gltf);
-        }
+        
+          if (waveClip) {
+            const action = miffyWaveMixer.clipAction(waveClip);
+            action.setLoop(THREE.LoopRepeat); // Ensure it loops
+            action.play();
+            console.log("Cashier Miffy is waving!");
+          } else {
+            console.warn("Waving animation not found for Cashier Miffy");
+          }
+        }        
+        else if (model.name === "barista-miffy") {
+          scene.add(object);
+          miffyPickupMixer = new THREE.AnimationMixer(object);
+          const clips = gltf.animations;
+          
+          // Find animations
+          const pickupClip = THREE.AnimationClip.findByName(clips, 'pickup');
+          const putdownClip = THREE.AnimationClip.findByName(clips, 'putdown');
+        
+          if (pickupClip && putdownClip) {
+            const pickupAction = miffyPickupMixer.clipAction(pickupClip);
+            pickupAction.setLoop(THREE.LoopOnce);
+            pickupAction.clampWhenFinished = true;
+            pickupAction.play();
+            console.log("Barista Miffy is picking up!");
+        
+          } else {
+            console.warn("Pickup or Putdown animation not found for Barista Miffy");
+          }
+        }        
         else if (model.name === "cloud") {
           cloudAnimation(object, gltf);
         }
@@ -500,23 +529,69 @@ const models = [
   {
     name: "table",
     path: "/assets/long-table/long-table-transformed.glb",
-    position: new THREE.Vector3(0, 110, -600),
+    position: new THREE.Vector3(350, 110, -500),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
     scale: new THREE.Vector3(0.5, 0.5, 0.5),
   },
   {
     name: "smallTable",
     path: "/assets/small-table/small-table-transformed-transformed.glb",
-    position: new THREE.Vector3(-200, 110, -500),
+    position: new THREE.Vector3(700, 110, -880),
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
-    scale: new THREE.Vector3(0.4, 0.4, 0.4),
+    scale: new THREE.Vector3(0.5, 0.5, 0.5),
   },
   {
-    name: "stool",
-    path: "/assets/stool/stool-transformed.glb",
-    position: new THREE.Vector3(70, 160, 0),
+    name: "smallTable2",
+    path: "/assets/small-table/small-table-transformed-transformed.glb",
+    position: new THREE.Vector3(420, 110, 90), // New table in front-right area
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
-    scale: new THREE.Vector3(1, 1, 1),
+    scale: new THREE.Vector3(0.4, 0.4, 0.4),
+},
+  {
+    name: "stool-long-table-1",
+    path: "/assets/stool/stool-transformed.glb",
+    position: new THREE.Vector3(120, 150, 50),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(0.8, 0.8, 0.8),
+  },
+  {
+    name: "stool-long-table-2",
+    path: "/assets/stool/stool-transformed.glb",
+    position: new THREE.Vector3(120, 150, 200),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(0.8, 0.8, 0.8),
+  },
+  {
+    name: "stool-long-table-3",
+    path: "/assets/stool/stool-transformed.glb",
+    position: new THREE.Vector3(120, 150, 350),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(0.8, 0.8, 0.8),
+  },
+  {
+    name: "stool-small-table-back-1",
+    path: "/assets/stool/stool-transformed.glb",
+    position: new THREE.Vector3(120, 150, -350),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(0.8, 0.8, 0.8),
+  },{
+    name: "stool-small-table-back-2",
+    path: "/assets/stool/stool-transformed.glb",
+    position: new THREE.Vector3(250, 150, -500),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(0.8, 0.8, 0.8),
+  },{
+    name: "stool-small-table-front-1",
+    path: "/assets/stool/stool-transformed.glb",
+    position: new THREE.Vector3(250, 150, 550),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(0.8, 0.8, 0.8),
+  },{
+    name: "stool-small-table-front-2",
+    path: "/assets/stool/stool-transformed.glb",
+    position: new THREE.Vector3(-100, 150, 550),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(0.8, 0.8, 0.8),
   },
     //cup, croissant, donut are relatively positioned to tray (global var)
   {
@@ -536,7 +611,7 @@ const models = [
   {
     name: "plant",
     path: "/assets/plant/plant-transformed.glb",
-    position: new THREE.Vector3(-500, 230, -40),
+    position: new THREE.Vector3(280, 260, -300),
     rotation: new THREE.Euler(0, Math.PI / 3, 0),
     scale: new THREE.Vector3(.75, .75, .75),
   },
@@ -550,52 +625,38 @@ const models = [
   {
     name: "cup",
     path: "/assets/cup/cup-transformed.glb",
-    position: trayPosition.clone().add(new THREE.Vector3(60, 10, -10)),
+    position: new THREE.Vector3(260, 265, 180),
     rotation: new THREE.Euler(),
     scale: new THREE.Vector3(0.3, 0.3, 0.3),
   },
   {
     name: "teapot",
     path: "/assets/teapot/teapot-transformed.glb",
-    position: new THREE.Vector3(-500, 110, 0),
-    rotation: new THREE.Euler(),
+    position: new THREE.Vector3(260, 135, 300),
+    rotation: new THREE.Euler(0, Math.PI * 7 / 16, 0),
     scale: new THREE.Vector3(3, 3, 3),
   },
   {
     name: "capybara",
     path: "/assets/capybara/capy-edited-in-blender-transformed.glb",
-    position: new THREE.Vector3(400, 110, 300),
-    rotation: new THREE.Euler(),
-    scale: new THREE.Vector3(0.3, 0.3, 0.3),
+    position: new THREE.Vector3(-500, 110, 600),
+    rotation: new THREE.Euler(0, Math.PI / 2, 0),
+    scale: new THREE.Vector3(0.4, 0.4, 0.4),
   },
   {
-    name: "miffy-wave",
+    name: "barista-miffy",
+    path: "/assets/miffy-animation/miffy_pickup_and_putdown-transformed.glb",
+    position: new THREE.Vector3(-500, 110, -350),
+    rotation: new THREE.Euler(0, Math.PI, 0),
+    scale: new THREE.Vector3(3, 3, 3),
+},
+{
+    name: "cashier-miffy",
     path: "/assets/miffy-animation/miffy-wave-fixed-arms-transformed.glb",
-    position: new THREE.Vector3(-200, 110, -400),
-    rotation: new THREE.Euler(0, Math.PI / 6, 0),
+    position: new THREE.Vector3(-270, 110, -300),
+    rotation: new THREE.Euler(0, 0, 0),
     scale: new THREE.Vector3(3, 3, 3),
-  },
-  {
-    name: "miffy-pickup",
-    path: "/assets/miffy-animation/miffy_pickup_and_putdown-transformed.glb",
-    position: new THREE.Vector3(0, 110, -400),
-    rotation: new THREE.Euler(0, Math.PI / 6, 0),
-    scale: new THREE.Vector3(3, 3, 3),
-  },
-  {
-    name: "miffy-holding",
-    path: "/assets/miffy-animation/miffy_pickup_and_putdown-transformed.glb",
-    position: new THREE.Vector3(200, 110, -400),
-    rotation: new THREE.Euler(0, Math.PI / 6, 0),
-    scale: new THREE.Vector3(3, 3, 3),
-  },
-  {
-    name: "miffy-putdown",
-    path: "/assets/miffy-animation/miffy_pickup_and_putdown-transformed.glb",
-    position: new THREE.Vector3(400, 110, -400),
-    rotation: new THREE.Euler(0, Math.PI / 6, 0),
-    scale: new THREE.Vector3(3, 3, 3),
-  },
+},
   {
     name: "star",
     path: "/assets/star/star-transformed.glb",
