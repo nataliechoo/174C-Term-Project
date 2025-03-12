@@ -23,6 +23,7 @@ import {
   fillLight,
   backLight,
 } from "./core/renderer.js";
+import { createGround } from "./core/ground.js";
 
 // Global constants and settings
 const FPS_LIMIT = 60;
@@ -82,7 +83,10 @@ function init() {
   
   // Load all models
   loadGLTFModels();
+
   initStarLight();
+  createGround();
+
 
   envMap = setupEnvironment(scene, renderer);
   // Initialize B-spline paths
@@ -109,9 +113,9 @@ function animate() {
   const blackColor = new THREE.Color(0x000000);
   const blueColor = new THREE.Color(0x87ceeb);
   
-  const transitionStartTime = 11.5; // seconds
-  const delayBeforeVisibleTransition = 3.5; // first 3 seconds remain visually black
-  const actualLerpDuration = 9; // then actually lerp over next 2 seconds
+  const transitionStartTime = 12; // 12 seconds
+  const delayBeforeVisibleTransition = 4; // first 4 seconds remain visually black
+  const actualLerpDuration = 9; // then actually lerp over next 9 seconds
 
   // Calculate physics delta time (clamped to avoid large jumps)
   const physicsDeltaTime = Math.min((currentTime - lastPhysicsTime) / 1000, 0.1);
@@ -161,7 +165,7 @@ function animate() {
   } else if(elapsedTime > (transitionStartTime + delayBeforeVisibleTransition + actualLerpDuration)){
       scene.background.copy(blueColor);
       [keyLight, fillLight, backLight].forEach(light => light.visible = true);
-      renderer.toneMappingExposure = 0.5; // final exposure
+      //renderer.toneMappingExposure = 0.5; // final exposure
       scene.environment = envMap;
   }
 
