@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { scene } from "../main.js";
+import { scene, animationTiming } from "../main.js";
 
 // Animation mixers
 export let miffyWaveMixer;

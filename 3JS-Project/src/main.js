@@ -29,6 +29,14 @@ import { createGround } from "./core/ground.js";
 const FPS_LIMIT = 60;
 const TIME_STEP = 1 / FPS_LIMIT;
 
+let pathStartTime = null; // Track when camera starts moving along spline
+let blackoutStartTime = null; // Track when blackout starts
+let blackoutRemoved = false; // Flag to track if blackout has been removed
+let lightsEnabled = false; // Flag to track if lights should stay enabled permanently
+export const animationTiming  = {
+  BEGIN_ANIMATION_SEQUENCE: Infinity // Time sampled when blackout starts
+} 
+
 // Time tracking for physics
 let lastPhysicsTime = 0;
 let accumulatedTime = 0;
@@ -39,7 +47,7 @@ export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000); // Light blue sky (0x87ceeb)
 
 // Setup clock
-const clock = new THREE.Clock();
+export const clock = new THREE.Clock();
 
 // Initialize camera, renderer, and controls
 const camera = initCamera(window.innerWidth, window.innerHeight);
@@ -76,9 +84,6 @@ function removeBlackout() {
       console.warn("Blackout div not found.");
   }
 }
-let pathStartTime = null; // Track when camera starts moving along spline
-let blackoutStartTime = null; // Track when blackout starts
-let blackoutRemoved = false; // Flag to track if blackout has been removed
 
 function handlePathMode(elapsedTime) {
     const stationaryDuration = 6; // Time to remain stationary before blackout
@@ -96,7 +101,7 @@ function handlePathMode(elapsedTime) {
         const startPoint = cameraControlPoints[0];
         camera.position.set(startPoint[0], startPoint[1], startPoint[2]);
 
-        pathStartTime = elapsedTime; // Record the start time
+        pathStartTime = elapsedTime; // Record when PATH starts
         return;
     }
 
@@ -115,8 +120,10 @@ function handlePathMode(elapsedTime) {
     if ((elapsedTime >= blackoutStartTime + blackoutDuration) && !blackoutRemoved) {
         // End blackout and start moving along spline
         removeBlackout();
+        [keyLight, fillLight, backLight].forEach(light => light.visible = true); // Enable lights permanently
+        lightsEnabled = true;
         blackoutRemoved = true;
-
+        console.log("Blackout removed at:", elapsedTime);
     }
 
     if (blackoutRemoved) {
@@ -218,31 +225,30 @@ function animate() {
     case CAMERA_MODE.PATH:
       // Camera follows the B-spline path
       handlePathMode(elapsedTime);
+      if (!lightsEnabled) {
+        [keyLight, fillLight, backLight].forEach(light => light.visible = false); // Disable lights temporarily
+        scene.environment = null;
+      } else {
+          [keyLight, fillLight, backLight].forEach(light => light.visible = true); // Ensure lights stay enabled permanently
+          scene.environment = envMap;
+      }
+
+      // Start lerping only after BEGIN_ANIMATION_SEQUENCE is set
+      if (animationTiming.BEGIN_ANIMATION_SEQUENCE !== Infinity) {
+        const transitionStartTime = animationTiming.BEGIN_ANIMATION_SEQUENCE + 6; // as animation sequence begins
+        const actualLerpDuration = 12; // Lerp duration (12 seconds)
+        
+      if (elapsedTime >= transitionStartTime && elapsedTime <= transitionStartTime + actualLerpDuration) {
+          const lerpFactor = (elapsedTime - transitionStartTime) / actualLerpDuration;
+          scene.background.copy(blackColor).lerp(blueColor, lerpFactor);
+          [keyLight, fillLight, backLight].forEach(light => light.visible = true);
+          renderer.toneMappingExposure = 0.5; // final exposure
+          scene.environment = envMap;
+      } else if (elapsedTime > transitionStartTime + actualLerpDuration) {
+          scene.background.copy(blueColor); // Final background color
+      }
+    }
       break;
-  }
-
-  const transitionStartTime = 12; // 12 seconds
-  const delayBeforeVisibleTransition = 2; // first 4 seconds remain visually black
-  const actualLerpDuration = 8; // then actually lerp over next 9 seconds
-
-  if (elapsedTime < transitionStartTime + delayBeforeVisibleTransition) {
-    scene.background.copy(blackColor);
-    scene.environment = null;
-    [keyLight, fillLight, backLight].forEach(light => light.visible = false);
-  } else if (elapsedTime >= (transitionStartTime + delayBeforeVisibleTransition) && elapsedTime <= (transitionStartTime + delayBeforeVisibleTransition + actualLerpDuration)) {
-      const lerpFactor =
-        (elapsedTime - (transitionStartTime + delayBeforeVisibleTransition)) /
-        actualLerpDuration;
-
-      scene.background.copy(blackColor).lerp(blueColor, lerpFactor);
-      
-      renderer.toneMappingExposure = 0.5; // final exposure
-      scene.environment = envMap;
-
-      [keyLight, fillLight, backLight].forEach(light => light.visible = true);
-  } else if(elapsedTime > (transitionStartTime + delayBeforeVisibleTransition + actualLerpDuration)){
-      scene.background.copy(blueColor);
-      [keyLight, fillLight, backLight].forEach(light => light.visible = true);
   }
 
   // Update star position along its path

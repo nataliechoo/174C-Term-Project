@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { animationTiming, clock } from "../main.js"
 
 // Camera mode constants
 export const CAMERA_MODE = {
@@ -113,6 +114,9 @@ export function initCameraToggle(toggleButton) {
           break;
         case CAMERA_MODE.PATH:
           toggleButton.textContent = 'Camera Mode: Path';
+          console.log("BEGIN_ANIMATION_SEQUENCE before assignment:", animationTiming.BEGIN_ANIMATION_SEQUENCE);
+          animationTiming.BEGIN_ANIMATION_SEQUENCE = clock.getElapsedTime();
+          console.log("BEGIN_ANIMATION_SEQUENCE set at:", animationTiming.BEGIN_ANIMATION_SEQUENCE)
           break;
       }
       
