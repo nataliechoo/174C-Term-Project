@@ -68,7 +68,6 @@ function createBlackout() {
 }
 
 function removeBlackout() {
-  console.log("Removing blackout...");
   const blackoutDiv = document.getElementById('blackoutDiv'); // Find the div by ID
   if (blackoutDiv) {
       document.body.removeChild(blackoutDiv); // Safely remove it from the DOM
@@ -79,6 +78,7 @@ function removeBlackout() {
 }
 let pathStartTime = null; // Track when camera starts moving along spline
 let blackoutStartTime = null; // Track when blackout starts
+let blackoutRemoved = false; // Flag to track if blackout has been removed
 
 function handlePathMode(elapsedTime) {
     const stationaryDuration = 6; // Time to remain stationary before blackout
@@ -112,13 +112,18 @@ function handlePathMode(elapsedTime) {
         return;
     }
 
-    if (elapsedTime >= blackoutStartTime + blackoutDuration) {
+    if ((elapsedTime >= blackoutStartTime + blackoutDuration) && !blackoutRemoved) {
         // End blackout and start moving along spline
         removeBlackout();
+        blackoutRemoved = true;
 
-        const adjustedElapsedTime = elapsedTime - (pathStartTime + stationaryDuration + blackoutDuration);
-        updateCameraPath(camera, adjustedElapsedTime); // Start moving camera along spline
     }
+
+    if (blackoutRemoved) {
+      // After blackout ends, move the camera along the spline
+      const adjustedElapsedTime = elapsedTime - (pathStartTime + stationaryDuration + blackoutDuration);
+      updateCameraPath(camera, adjustedElapsedTime); // Start moving camera along spline
+  }
 }
 
 
