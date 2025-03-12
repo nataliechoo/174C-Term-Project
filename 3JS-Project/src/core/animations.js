@@ -168,12 +168,10 @@ export const mixers = [];
 
 export function updateAnimations(delta, elapsedTime) {
   [
-    // Legacy mixers
     miffyWaveMixer,
     miffyPickupMixer,
     miffyHoldingMixer,
     miffyPutdownMixer,
-    cloudMixer,
     ovenOpenMixer,
     doorOpenMixer,
     ...mixers
