@@ -19,10 +19,14 @@ export function setupMiffyWave(object, gltf) {
   const clips = gltf.animations;
   const waveClip = THREE.AnimationClip.findByName(clips, 'waving');
 
-  const action = miffyWaveMixer.clipAction(waveClip);
-  console.log("ANIMATING CLIPS");
-  console.log(waveClip);
-  action.play(); 
+  if (waveClip) {
+    const action = miffyWaveMixer.clipAction(waveClip);
+    action.setLoop(THREE.LoopRepeat); // Ensure it loops
+    action.play();
+    console.log("Cashier Miffy is waving!");
+  } else {
+    console.warn("Waving animation not found for Cashier Miffy");
+  }
 }
 
 /**
@@ -34,10 +38,48 @@ export function miffyPickup(object, gltf) {
   const clips = gltf.animations;
   const pickupClip = THREE.AnimationClip.findByName(clips, 'pickup');
 
-  const action = miffyPickupMixer.clipAction(pickupClip);
-  console.log("ANIMATING PICKUP CLIP");
-  console.log(pickupClip);
-  action.play(); 
+  
+  if (pickupClip) {
+    const action = miffyPickupMixer.clipAction(pickupClip);
+    action.setLoop(THREE.LoopOnce);
+    action.clampWhenFinished = true;
+    action.play();
+    console.log("Barista Miffy is picking up!");
+
+    // Attach tray to Miffy's hand
+    setTimeout(() => {
+      const handBone = object.getObjectByName("hand_r"); // Adjust based on your model
+      if (handBone && trayObject) {
+        handBone.add(trayObject);
+        trayObject.position.set(0, 10, 0); // Adjust tray position relative to hand
+        console.log("Tray attached to Miffy's hand!");
+      }
+    }, 500); // Delay to match pickup timing
+  }
+}
+
+/**
+ * Setup Miffy pickup and putdown for barista
+ */
+export function miffyBarista(object, gltf) {
+  scene.add(object);
+  miffyPickupMixer = new THREE.AnimationMixer(object);
+  const clips = gltf.animations;
+  
+  // Find animations
+  const pickupClip = THREE.AnimationClip.findByName(clips, 'pickup');
+  const putdownClip = THREE.AnimationClip.findByName(clips, 'putdown');
+
+  if (pickupClip && putdownClip) {
+    const pickupAction = miffyPickupMixer.clipAction(pickupClip);
+    pickupAction.setLoop(THREE.LoopOnce);
+    pickupAction.clampWhenFinished = true;
+    pickupAction.play();
+    console.log("Barista Miffy is picking up!");
+
+  } else {
+    console.warn("Pickup or Putdown animation not found for Barista Miffy");
+  }
 }
 
 /**
