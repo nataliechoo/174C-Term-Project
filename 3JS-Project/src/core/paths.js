@@ -129,7 +129,7 @@ export function updateCameraPath(camera, elapsedTime) {
 export function updateStarPath(elapsedTime) {
   if (!starObject || !starLight) return;
   
-  const starDuration = 6; // Adjust duration to control star speed
+  const starDuration = 4; // Adjust duration to control star speed
   let starT = (elapsedTime % starDuration) / starDuration;
   const starPos = bspline_interpolate(starT, starSplineDegree, starControlPoints);
 
