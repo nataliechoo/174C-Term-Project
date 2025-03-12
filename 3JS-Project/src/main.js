@@ -50,6 +50,8 @@ let ovenCloseMixer;
 let doorOpenMixer;
 let starObject = null;
 
+//tray position (for items placed on it)
+let trayPosition = new THREE.Vector3(-60, 260, 40);
 
 // lighting
 var keyLight = new THREE.DirectionalLight(
@@ -304,7 +306,7 @@ function loadGLTFModels(models) {
 const models = [
   {
     name: "base",
-    path: "/assets/new-base/base-transformed.glb",
+    path: "/assets/new-base/base-fixed-transformed.glb",
     position: new THREE.Vector3(-300, 0, 0),
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(3, 3, 3),
@@ -331,9 +333,45 @@ const models = [
     scale: new THREE.Vector3(0.4, 0.4, 0.4),
   },
   {
+    name: "stool",
+    path: "/assets/stool/stool-transformed.glb",
+    position: new THREE.Vector3(70, 160, 0),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(1, 1, 1),
+  },
+    //cup, croissant, donut are relatively positioned to tray (global var)
+  {
+    name: "donut",
+    path: "/assets/donut/donut-transformed.glb",
+    position: trayPosition.clone().add(new THREE.Vector3(0, 5, 70)),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(1.5, 1.5, 1.5),
+  },
+  {
+    name: "croissant",
+    path: "/assets/croissant/croissant-transformed.glb",
+    position: trayPosition.clone().add(new THREE.Vector3(0, 20, -10)),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(1.5, 1.5, 1.5),
+  },
+  {
+    name: "plant",
+    path: "/assets/plant/plant-transformed.glb",
+    position: new THREE.Vector3(-500, 230, -40),
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(.75, .75, .75),
+  },
+  {
+    name: "tray",
+    path: "/assets/tray/tray-transformed.glb",
+    position: trayPosition,
+    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    scale: new THREE.Vector3(1.5, 1.5, 1.5),
+  },
+  {
     name: "cup",
     path: "/assets/cup/cup-transformed.glb",
-    position: new THREE.Vector3(-100, 270, 200),
+    position: trayPosition.clone().add(new THREE.Vector3(60, 10, -10)),
     rotation: new THREE.Euler(),
     scale: new THREE.Vector3(0.3, 0.3, 0.3),
   },
