@@ -48,6 +48,7 @@ let cloudMixer;
 let ovenOpenMixer;
 let ovenCloseMixer;
 let doorOpenMixer;
+let starObject = null;
 
 
 // lighting
@@ -285,6 +286,9 @@ function loadGLTFModels(models) {
         if (model.name === "base") {
           doorOpen(object, gltf);
         }
+        if (model.name === "star") {
+          starObject = object;
+        }
 
         scene.add(object);
         console.log(`${model.name} GLB loaded successfully`);
@@ -375,13 +379,13 @@ const models = [
     rotation: new THREE.Euler(0, Math.PI / 6, 0),
     scale: new THREE.Vector3(3, 3, 3),
   },
-  // {
-  //   name: "star",
-  //   path: "/assets/star/star-transformed.glb",
-  //   position: new THREE.Vector3(0, 900, -400),
-  //   rotation: new THREE.Euler(0, Math.PI / 4, 0),
-  //   scale: new THREE.Vector3(1, 1, 1),
-  // },
+  {
+    name: "star",
+    path: "/assets/star/star-transformed.glb",
+    position: new THREE.Vector3(750, 300, -3150), // start of spline, y-100
+    rotation: new THREE.Euler(0, Math.PI / 4, 0),
+    scale: new THREE.Vector3(1, 1, 1),
+  },
   {
     name: "sign",
     path: "/assets/sign/textured-sign-transformed.glb",
@@ -536,6 +540,15 @@ function animate() {
     let nextT = ((elapsedTime + lookAheadOffset) % duration) / duration;
     const nextPos = bspline_interpolate(nextT, degree, controlPoints);
     camera.lookAt(new THREE.Vector3(nextPos[0], nextPos[1], nextPos[2]));
+  }
+
+  if (starObject) {
+    const starDuration = 6; // Adjust duration to control star speed
+    let starT = (elapsedTime % starDuration) / starDuration;
+    const starPos = bspline_interpolate(starT, starDegree, starControlPoints);
+
+    // Move the star with Y offset of -100
+    starObject.position.set(starPos[0], starPos[1] - 100, starPos[2]);
   }
 
   if (miffyWaveMixer) {
