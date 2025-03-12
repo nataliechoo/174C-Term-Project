@@ -105,7 +105,7 @@ export function initCameraToggle(toggleButton) {
     
     toggleButton.addEventListener('click', () => {
       // Cycle through camera modes: Manual -> Path -> Follow Star -> Manual
-      cameraMode = (cameraMode + 1) % 3;
+      cameraMode = (cameraMode + 1) % 2;
       
       // Update button text based on current mode
       switch (cameraMode) {
@@ -115,9 +115,9 @@ export function initCameraToggle(toggleButton) {
         case CAMERA_MODE.PATH:
           toggleButton.textContent = 'Camera Mode: Path';
           break;
-        case CAMERA_MODE.FOLLOW_STAR:
-          toggleButton.textContent = 'Camera Mode: Follow Star';
-          break;
+        // case CAMERA_MODE.FOLLOW_STAR:
+        //   toggleButton.textContent = 'Camera Mode: Follow Star';
+        //   break;
       }
       
       // For backward compatibility
@@ -130,20 +130,20 @@ export function initCameraToggle(toggleButton) {
   }
 }
 
-/**
- * Makes the camera follow the star with offset
- * @param {THREE.PerspectiveCamera} camera - The camera to position
- * @param {THREE.Object3D} starObject - The star object to follow
- */
-export function updateStarFollowCamera(camera, starObject) {
-  if (!starObject) return;
+// /**
+//  * Makes the camera follow the star with offset
+//  * @param {THREE.PerspectiveCamera} camera - The camera to position
+//  * @param {THREE.Object3D} starObject - The star object to follow
+//  */
+// export function updateStarFollowCamera(camera, starObject) {
+//   if (!starObject) return;
   
-  // Position camera behind and slightly above the star
-  const offset = new THREE.Vector3(0, 100, 400);
+//   // Position camera behind and slightly above the star
+//   const offset = new THREE.Vector3(0, 100, 400);
   
-  // Set camera position relative to star
-  camera.position.copy(starObject.position).add(offset);
+//   // Set camera position relative to star
+//   camera.position.copy(starObject.position).add(offset);
   
-  // Look at the star
-  camera.lookAt(starObject.position);
-} 
+//   // Look at the star
+//   camera.lookAt(starObject.position);
+// } 

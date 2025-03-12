@@ -174,7 +174,7 @@ export const models = [
     name: "star",
     path: "/assets/star/star-transformed.glb",
     position: new THREE.Vector3(750, 300, -3150), // start of spline, y-100
-    rotation: new THREE.Euler(0, Math.PI / 4, 0),
+    rotation: new THREE.Euler(-Math.PI / 8, Math.PI / 4, -Math.PI / 8),
     scale: new THREE.Vector3(1, 1, 1),
   },
   {
@@ -348,6 +348,16 @@ export function loadGLTFModels() {
           miffyBarista(object, gltf);
         }
         else if (model.name === "cloud") {
+          object.traverse((node) => {
+            if (node.isMesh && node.material) {
+              node.material = new THREE.MeshStandardMaterial({
+                color: new THREE.Color(0xffffff), // white cloud color
+                emissive: new THREE.Color(0xffffff), // emissive color white
+                emissiveIntensity: 0.1, // adjust as needed
+              });
+              node.material.needsUpdate = true;
+            }
+          });
           cloudAnimation(object, gltf);
         }
         else if (model.name === "oven") {
@@ -358,6 +368,18 @@ export function loadGLTFModels() {
         }
         else if (model.name === "star") {
           starObject = object;
+          starObject.traverse((node) => {
+            if (node.isMesh && node.material && "color" in node.material) {
+              node.castShadow = false;
+              node.receiveShadow = false;
+              // Set the color to yellow
+              node.material.color.set(0xffff00);
+              // Optionally, adjust emissive to enhance the yellow glow:
+              node.material.emissive = new THREE.Color(0xffff00);
+              node.material.emissiveIntensity = 2;
+              node.material.needsUpdate = true;
+            }
+          });
         }
         else if (model.name === "sign") {
           signObject = object;

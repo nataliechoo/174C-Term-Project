@@ -4,7 +4,7 @@ import "./styles.css";
 // Import core modules
 import { loadGLTFModels, signPhysics, createControls, starObject } from "./core/models.js";
 import { updateAnimations } from "./core/animations.js";
-import { initSplinePaths, updateCameraPath, updateStarPath } from "./core/paths.js";
+import { initSplinePaths, updateCameraPath, updateStarPath, initStarLight } from "./core/paths.js";
 import { 
   initCamera, 
   initControls, 
@@ -12,13 +12,16 @@ import {
   cameraMode,
   CAMERA_MODE,
   initCameraToggle,
-  updateStarFollowCamera 
+  //updateStarFollowCamera 
 } from "./core/camera.js";
 import { 
   initRenderer, 
   setupEnvironment, 
   initLighting, 
-  initStats 
+  initStats,
+  keyLight,
+  fillLight,
+  backLight,
 } from "./core/renderer.js";
 
 // Global constants and settings
@@ -32,7 +35,7 @@ let accumulatedTime = 0;
 // Initialize core components
 THREE.Cache.enabled = true;
 export const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb); // Light blue sky
+scene.background = new THREE.Color(0x000000); // Light blue sky (0x87ceeb)
 
 // Setup clock
 const clock = new THREE.Clock();
@@ -42,6 +45,8 @@ const camera = initCamera(window.innerWidth, window.innerHeight);
 const renderer = initRenderer(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 const controls = initControls(camera, renderer.domElement);
+
+let envMap; // for HDR environment map
 
 // Initialize lighting and environment
 initLighting(scene);
@@ -77,7 +82,9 @@ function init() {
   
   // Load all models
   loadGLTFModels();
-  
+  initStarLight();
+
+  envMap = setupEnvironment(scene, renderer);
   // Initialize B-spline paths
   initSplinePaths();
   
@@ -88,6 +95,8 @@ function init() {
   }, 1000 / FPS_LIMIT);
 }
 
+
+
 /**
  * Main animation loop
  */
@@ -97,6 +106,13 @@ function animate() {
   const elapsedTime = clock.getElapsedTime();
   const currentTime = performance.now();
   
+  const blackColor = new THREE.Color(0x000000);
+  const blueColor = new THREE.Color(0x87ceeb);
+  
+  const transitionStartTime = 11.5; // seconds
+  const delayBeforeVisibleTransition = 3.5; // first 3 seconds remain visually black
+  const actualLerpDuration = 9; // then actually lerp over next 2 seconds
+
   // Calculate physics delta time (clamped to avoid large jumps)
   const physicsDeltaTime = Math.min((currentTime - lastPhysicsTime) / 1000, 0.1);
   lastPhysicsTime = currentTime;
@@ -124,10 +140,29 @@ function animate() {
       updateCameraPath(camera, elapsedTime);
       break;
     
-    case CAMERA_MODE.FOLLOW_STAR:
-      // Camera follows the star object
-      updateStarFollowCamera(camera, starObject);
-      break;
+    // case CAMERA_MODE.FOLLOW_STAR:
+    //   // Camera follows the star object
+    //   updateStarFollowCamera(camera, starObject);
+    //   break;
+  }
+
+  if (elapsedTime < transitionStartTime + delayBeforeVisibleTransition) {
+    scene.background.copy(blackColor);
+    scene.environment = null;
+    [keyLight, fillLight, backLight].forEach(light => light.visible = false);
+  } else if (elapsedTime >= (transitionStartTime + delayBeforeVisibleTransition) && elapsedTime <= (transitionStartTime + delayBeforeVisibleTransition + actualLerpDuration)) {
+      const lerpFactor =
+        (elapsedTime - (transitionStartTime + delayBeforeVisibleTransition)) /
+        actualLerpDuration;
+
+      scene.background.copy(blackColor).lerp(blueColor, lerpFactor);
+      
+      [keyLight, fillLight, backLight].forEach(light => light.visible = true);
+  } else if(elapsedTime > (transitionStartTime + delayBeforeVisibleTransition + actualLerpDuration)){
+      scene.background.copy(blueColor);
+      [keyLight, fillLight, backLight].forEach(light => light.visible = true);
+      renderer.toneMappingExposure = 0.5; // final exposure
+      scene.environment = envMap;
   }
 
   // Update star position along its path

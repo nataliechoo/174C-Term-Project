@@ -27,38 +27,48 @@ export function initRenderer(width, height) {
  * @param {THREE.Scene} scene - The scene to add environment to
  * @param {THREE.WebGLRenderer} renderer - The renderer to use
  */
+// Changed to allow it to be setup at a later point.
+export let hdrEnvironmentTexture = null;
+
 export function setupEnvironment(scene, renderer) {
   const pmremGenerator = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+  const envMap = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environment = envMap;
+  
+  // expose environment texture for toggling
+  return envMap;
 }
+
+export let keyLight, fillLight, backLight;
 
 /**
  * Initialize lighting for scene
  * @param {THREE.Scene} scene - The scene to add lights to
  */
 export function initLighting(scene) {
-  const keyLight = new THREE.DirectionalLight(
+  keyLight = new THREE.DirectionalLight(
     new THREE.Color("hsl(30, 100%, 85%)"),
     2.5
   );
   keyLight.position.set(-100, 100, 100);
   scene.add(keyLight);
 
-  const fillLight = new THREE.DirectionalLight(
+  fillLight = new THREE.DirectionalLight(
     new THREE.Color("hsl(240, 100%, 85%)"),
     1.5
   );
   fillLight.position.set(100, 100, 100);
   scene.add(fillLight);
 
-  const backLight = new THREE.DirectionalLight(0xffffff, 2.0);
+  backLight = new THREE.DirectionalLight(0xffffff, 2.0);
   backLight.position.set(100, 100, -100);
   scene.add(backLight);
 
   // Shadow settings
-  keyLight.castShadow = true;
-  fillLight.castShadow = true;
-  backLight.castShadow = true;
+  [keyLight, fillLight, backLight].forEach(light => {
+    light.castShadow = true;
+    scene.add(light);
+  });
 
   // Higher quality shadows
   keyLight.shadow.mapSize.width = 4096;
