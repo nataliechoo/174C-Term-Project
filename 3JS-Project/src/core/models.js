@@ -37,7 +37,7 @@ export const models = [
     path: "/assets/oven/oven-transformed.glb",
     position: new THREE.Vector3(-500, 265, -500),
     rotation: new THREE.Euler(0, Math.PI, 0),
-    scale: new THREE.Vector3(1, 1, 1),
+    scale: new THREE.Vector3(1.5, 1.5, 1.5),
   },
   {
     name: "table",
@@ -295,6 +295,7 @@ export function createControls(initCameraMode, cameraModes, currentMode) {
 
 /**
  * Load all GLTF models
+ * @returns {Promise} Promise that resolves with an array of loaded model objects
  */
 export function loadGLTFModels() {
   const dracoLoader = new DRACOLoader();
@@ -302,82 +303,104 @@ export function loadGLTFModels() {
   const loader = new GLTFLoader();
   loader.setDRACOLoader(dracoLoader);
 
-  models.forEach((model) => {
-    loader.load(
-      model.path,
-      (gltf) => {
-        const object = gltf.scene;
-        object.position.copy(model.position);
-        object.rotation.copy(model.rotation);
-        object.scale.copy(model.scale);
+  // Create an array to track loaded models
+  const loadedModels = [];
+  const modelPromises = models.map(model => {
+    return new Promise((resolve, reject) => {
+      loader.load(
+        model.path,
+        (gltf) => {
+          const object = gltf.scene;
+          object.position.copy(model.position);
+          object.rotation.copy(model.rotation);
+          object.scale.copy(model.scale);
 
-        gltf.scene.traverse((node) => {
-          if (node.isBone) {
-            console.log("Bone found:", node.name); // Log all bone names
+          gltf.scene.traverse((node) => {
+            if (node.isBone) {
+              console.log("Bone found:", node.name); // Log all bone names
+            }
+          });
+
+          // Apply special materials if needed
+          if (model.name === "teapot") {
+            object.traverse((node) => {
+              if (node.isMesh) {
+                applyTeapotMaterial(node);
+              }
+            });
           }
-        });
+          else if (model.name === "moon") {
+            let meshIndex = 0;
+            object.traverse((node) => {
+              if (node.isMesh) {
+                applyMoonMesh(node, meshIndex++);
+              }
+            });
+          }
+          else if (model.name === "capybara") {
+            let meshIndex = 0;
+            object.traverse((node) => {
+              if (node.isMesh) {
+                applyCapybaraMaterial(node, meshIndex++);
+              }
+            });
+          }
+          else if (model.name === "cashier-miffy") {
+            setupMiffyWave(object, gltf);
+          }
+          else if (model.name === "barista-miffy") {
+            miffyBarista(object, gltf);
+          }
+          else if (model.name === "cloud") {
+            cloudAnimation(object, gltf);
+          }
+          else if (model.name === "oven") {
+            ovenOpen(object, gltf);
+          }
+          else if (model.name === "base") {
+            doorOpen(object, gltf);
+          }
+          else if (model.name === "star") {
+            starObject = object;
+          }
+          else if (model.name === "sign") {
+            signObject = object;
 
-        // Apply special materials if needed
-        if (model.name === "teapot") {
-          object.traverse((node) => {
-            if (node.isMesh) {
-              applyTeapotMaterial(node);
-            }
+            // Create and initialize sign physics
+            signPhysics = new SignPhysics(scene);
+
+            // Use a slight delay to ensure the model is properly positioned
+            setTimeout(() => {
+              signPhysics.init(signObject);
+            }, 100);
+          }
+
+          scene.add(object);
+          console.log(`${model.name} loaded successfully`);
+          
+          // Add to loaded models array
+          loadedModels.push({
+            name: model.name,
+            object: object,
+            gltf: gltf
           });
+          
+          resolve(model.name);
+        },
+        undefined,
+        (err) => {
+          console.error(`Error loading ${model.name}:`, err);
+          reject(err);
         }
-        else if (model.name === "moon") {
-          let meshIndex = 0;
-          object.traverse((node) => {
-            if (node.isMesh) {
-              applyMoonMesh(node, meshIndex++);
-            }
-          });
-        }
-        else if (model.name === "capybara") {
-          let meshIndex = 0;
-          object.traverse((node) => {
-            if (node.isMesh) {
-              applyCapybaraMaterial(node, meshIndex++);
-            }
-          });
-        }
-        else if (model.name === "cashier-miffy") {
-          setupMiffyWave(object, gltf);
-        }
-        else if (model.name === "barista-miffy") {
-          miffyBarista(object, gltf);
-        }
-        else if (model.name === "cloud") {
-          cloudAnimation(object, gltf);
-        }
-        else if (model.name === "oven") {
-          ovenOpen(object, gltf);
-        }
-        else if (model.name === "base") {
-          doorOpen(object, gltf);
-        }
-        else if (model.name === "star") {
-          starObject = object;
-        }
-        else if (model.name === "sign") {
-          signObject = object;
+      );
+    });
+  });
 
-          // Create and initialize sign physics
-          signPhysics = new SignPhysics(scene);
-
-          // Use a slight delay to ensure the model is properly positioned
-          setTimeout(() => {
-            signPhysics.init(signObject);
-          }, 100);
-        }
-
-        scene.add(object);
-        console.log(`${model.name} loaded successfully`);
-      },
-      undefined,
-      (err) => {
-        console.error(`Error loading ${model.name}:`, err);
-      }
-    );
+  return Promise.all(modelPromises).then(() => {
+    console.log("All models loaded successfully");
+    return loadedModels;
+  }).catch(error => {
+    console.error("Error loading models:", error);
+    return null;
   });
 } 

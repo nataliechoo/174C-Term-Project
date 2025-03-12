@@ -21,6 +21,9 @@ import {
   initStats 
 } from "./core/renderer.js";
 
+// Import physics systems
+import { CroissantBaker } from "./physics/CroissantBaker.js";
+
 // Global constants and settings
 const FPS_LIMIT = 60;
 const TIME_STEP = 1 / FPS_LIMIT;
@@ -28,6 +31,12 @@ const TIME_STEP = 1 / FPS_LIMIT;
 // Time tracking for physics
 let lastPhysicsTime = 0;
 let accumulatedTime = 0;
+
+// Global references for the thermoelasticity system
+let croissantBaker;
+let croissantObject;
+let ovenObject;
+let bakingStarted = false;
 
 // Initialize core components
 THREE.Cache.enabled = true;
@@ -76,7 +85,23 @@ function init() {
   setupCameraKeyboardControls(camera, controls, signPhysics);
   
   // Load all models
-  loadGLTFModels();
+  loadGLTFModels().then(loadedModels => {
+    // Get references to croissant and oven
+    if (loadedModels) {
+      croissantObject = loadedModels.find(model => model.name === "croissant")?.object;
+      ovenObject = loadedModels.find(model => model.name === "oven")?.object;
+      
+      // Initialize croissant baker if both objects are found
+      if (croissantObject && ovenObject) {
+        console.log("Setting up croissant baker");
+        croissantBaker = new CroissantBaker(scene);
+        croissantBaker.init(ovenObject, croissantObject);
+        bakingStarted = true; // Mark as started since auto animation is enabled
+      } else {
+        console.warn("Couldn't find croissant or oven objects");
+      }
+    }
+  });
   
   // Initialize B-spline paths
   initSplinePaths();
@@ -109,6 +134,12 @@ function animate() {
     if (signPhysics && signPhysics.initialized) {
       signPhysics.update(TIME_STEP);
     }
+    
+    // Update croissant baker physics
+    if (croissantBaker && croissantBaker.initialized) {
+      croissantBaker.update(TIME_STEP);
+    }
+    
     accumulatedTime -= TIME_STEP;
   }
 
