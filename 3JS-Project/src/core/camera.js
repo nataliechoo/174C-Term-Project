@@ -4,8 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 // Camera mode constants
 export const CAMERA_MODE = {
   MANUAL: 0,
-  PATH: 1,
-  FOLLOW_STAR: 2
+  PATH: 1
 };
 
 // Camera mode state (replaced boolean toggle)
@@ -115,9 +114,6 @@ export function initCameraToggle(toggleButton) {
         case CAMERA_MODE.PATH:
           toggleButton.textContent = 'Camera Mode: Path';
           break;
-        // case CAMERA_MODE.FOLLOW_STAR:
-        //   toggleButton.textContent = 'Camera Mode: Follow Star';
-        //   break;
       }
       
       // For backward compatibility

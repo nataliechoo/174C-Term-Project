@@ -368,6 +368,7 @@ export function loadGLTFModels() {
           miffyBarista(object, gltf);
         }
         else if (model.name === "cloud") {
+          object.name = "cloud"
           object.traverse((node) => {
             if (node.isMesh && node.material) {
               node.material = new THREE.MeshStandardMaterial({

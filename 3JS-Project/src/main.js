@@ -4,7 +4,7 @@ import "./styles.css";
 // Import core modules
 import { loadGLTFModels, signPhysics, createControls, starObject } from "./core/models.js";
 import { updateAnimations } from "./core/animations.js";
-import { initSplinePaths, updateCameraPath, updateStarPath, initStarLight } from "./core/paths.js";
+import { initSplinePaths, updateCameraPath, updateStarPath, initStarLight, cameraControlPoints } from "./core/paths.js";
 import { 
   initCamera, 
   initControls, 
@@ -49,6 +49,80 @@ const controls = initControls(camera, renderer.domElement);
 
 let envMap; // for HDR environment map
 
+function createBlackout() {
+  console.log("Creating blackout...");
+  const blackoutDiv = document.createElement('div');
+  blackoutDiv.id = 'blackoutDiv';
+  blackoutDiv.style.position = 'fixed';
+  blackoutDiv.style.top = '0';
+  blackoutDiv.style.left = '0';
+  blackoutDiv.style.width = '100%';
+  blackoutDiv.style.height = '100%';
+  blackoutDiv.style.backgroundColor = 'black';
+  blackoutDiv.style.zIndex = '1000'; // Ensure it's on top of your canvas
+
+  document.body.appendChild(blackoutDiv);
+
+  // Store reference to remove later
+  window.blackoutDiv = blackoutDiv;
+}
+
+function removeBlackout() {
+  console.log("Removing blackout...");
+  const blackoutDiv = document.getElementById('blackoutDiv'); // Find the div by ID
+  if (blackoutDiv) {
+      document.body.removeChild(blackoutDiv); // Safely remove it from the DOM
+      console.log("Blackout removed.");
+  } else {
+      console.warn("Blackout div not found.");
+  }
+}
+let pathStartTime = null; // Track when camera starts moving along spline
+let blackoutStartTime = null; // Track when blackout starts
+
+function handlePathMode(elapsedTime) {
+    const stationaryDuration = 6; // Time to remain stationary before blackout
+    const blackoutDuration = 3;   // Duration of blackout effect
+
+    if (!pathStartTime) {
+        // Initial setup: Camera looks at cloud and moves to first control point
+        const cloud = scene.getObjectByName("cloud");
+        if (cloud) {
+            const cloudWorldPosition = new THREE.Vector3();
+            cloud.getWorldPosition(cloudWorldPosition);
+            camera.lookAt(cloudWorldPosition);
+        }
+
+        const startPoint = cameraControlPoints[0];
+        camera.position.set(startPoint[0], startPoint[1], startPoint[2]);
+
+        pathStartTime = elapsedTime; // Record the start time
+        return;
+    }
+
+    if (elapsedTime < pathStartTime + stationaryDuration) {
+        // During stationary phase, do nothing (camera stays still)
+        return;
+    }
+
+    if (!blackoutStartTime) {
+        // Start blackout effect after stationary phase
+        createBlackout();
+        blackoutStartTime = elapsedTime; // Record start time of blackout
+        return;
+    }
+
+    if (elapsedTime >= blackoutStartTime + blackoutDuration) {
+        // End blackout and start moving along spline
+        removeBlackout();
+
+        const adjustedElapsedTime = elapsedTime - (pathStartTime + stationaryDuration + blackoutDuration);
+        updateCameraPath(camera, adjustedElapsedTime); // Start moving camera along spline
+    }
+}
+
+
+
 // Initialize lighting and environment
 initLighting(scene);
 setupEnvironment(scene, renderer);
@@ -75,7 +149,8 @@ function init() {
   createControls(
     initCameraToggle, // Pass camera toggle initializer
     CAMERA_MODE,      // Pass camera mode constants
-    cameraMode        // Pass current camera mode
+    cameraMode,       // Pass current camera mode
+    clock             // 3js clock counter
   );
   
   // Setup keyboard shortcuts for camera movement
@@ -99,8 +174,6 @@ function init() {
   }, 1000 / FPS_LIMIT);
 }
 
-
-
 /**
  * Main animation loop
  */
@@ -113,9 +186,7 @@ function animate() {
   const blackColor = new THREE.Color(0x000000);
   const blueColor = new THREE.Color(0x87ceeb);
   
-  const transitionStartTime = 12; // 12 seconds
-  const delayBeforeVisibleTransition = 4; // first 4 seconds remain visually black
-  const actualLerpDuration = 9; // then actually lerp over next 9 seconds
+
 
   // Calculate physics delta time (clamped to avoid large jumps)
   const physicsDeltaTime = Math.min((currentTime - lastPhysicsTime) / 1000, 0.1);
@@ -141,14 +212,13 @@ function animate() {
     
     case CAMERA_MODE.PATH:
       // Camera follows the B-spline path
-      updateCameraPath(camera, elapsedTime);
+      handlePathMode(elapsedTime);
       break;
-    
-    // case CAMERA_MODE.FOLLOW_STAR:
-    //   // Camera follows the star object
-    //   updateStarFollowCamera(camera, starObject);
-    //   break;
   }
+
+  const transitionStartTime = 12; // 12 seconds
+  const delayBeforeVisibleTransition = 2; // first 4 seconds remain visually black
+  const actualLerpDuration = 8; // then actually lerp over next 9 seconds
 
   if (elapsedTime < transitionStartTime + delayBeforeVisibleTransition) {
     scene.background.copy(blackColor);
@@ -161,12 +231,13 @@ function animate() {
 
       scene.background.copy(blackColor).lerp(blueColor, lerpFactor);
       
+      renderer.toneMappingExposure = 0.5; // final exposure
+      scene.environment = envMap;
+
       [keyLight, fillLight, backLight].forEach(light => light.visible = true);
   } else if(elapsedTime > (transitionStartTime + delayBeforeVisibleTransition + actualLerpDuration)){
       scene.background.copy(blueColor);
       [keyLight, fillLight, backLight].forEach(light => light.visible = true);
-      //renderer.toneMappingExposure = 0.5; // final exposure
-      scene.environment = envMap;
   }
 
   // Update star position along its path
