@@ -2,14 +2,12 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { scene } from "../main.js";
-import { applyTeapotMaterial, applyMoonMesh, applyCapybaraMaterial, applySleepingCapybaraMaterial } from "./materials.js";
+import { applyTeapotMaterial, applyMoonMesh, applyCapybaraMaterial } from "./materials.js";
 import {
   miffyBarista,
   cloudAnimation,
   ovenOpen,
   doorOpen,
-  capySleep,
-  floating,
 } from "./animations.js";
 import { SignPhysics } from "../physics/SignPhysics.js";
 import { mixers } from "./animations.js";
@@ -18,17 +16,16 @@ import { mixers } from "./animations.js";
 export let starObject = null;
 export let signObject = null;
 export let signPhysics = null;
+export let trayObject = null;
 
 //tray position (for items placed on it)
-export const trayPosition = new THREE.Vector3(-60, 260, 40);
-export const capysleepinPosition = new THREE.Vector3(700, 50, -350);
-
+export const trayPosition = new THREE.Vector3(-500, 230, -100);
 
 // Model definitions
 export const models = [
   {
     name: "base",
-    path: "/assets/new-base/base-fixed-transformed.glb",
+    path: "/assets/new-base/foundation-base2-transformed.glb",
     position: new THREE.Vector3(-300, 0, 0),
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(3, 3, 3),
@@ -133,7 +130,7 @@ export const models = [
     name: "tray",
     path: "/assets/tray/tray-transformed.glb",
     position: trayPosition,
-    rotation: new THREE.Euler(0, Math.PI / 3, 0),
+    rotation: new THREE.Euler(0, Math.PI * 16, 0),
     scale: new THREE.Vector3(1.5, 1.5, 1.5),
   },
   {
@@ -163,20 +160,6 @@ export const models = [
     position: new THREE.Vector3(-500, 110, -350),
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(3, 3, 3),
-  },
-  {
-    name: "capy-sleeping",
-    path: "/assets/capybara-sleeping/capysleepin-test-transformed.glb",
-    position: capysleepinPosition,
-    rotation: new THREE.Euler(0, Math.PI, 0),
-    scale: new THREE.Vector3(.5, .5, .5),
-  },
-  {
-    name: "bubble",
-    path: "/assets/thought-bubble/thought-bubble-ani-transformed.glb",
-    position: capysleepinPosition.clone().add(new THREE.Vector3(-150, 30, 0)),
-    rotation: new THREE.Euler(0, -Math.PI/2, 0),
-    scale: new THREE.Vector3(1, 1, 1),
   },
   {
     name: "cashier-miffy",
@@ -213,7 +196,6 @@ export const models = [
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(5, 5, 5),
   },
-
 ];
 
 /**
@@ -352,6 +334,36 @@ export function createControls(initCameraMode, cameraModes, currentMode, croissa
 /**
  * Load all GLTF models
  */
+let trayLoaded = false;
+let croissantLoaded = false;
+let donutLoaded = false;
+
+function attachItemsToTray() {
+  if (trayLoaded && (croissantLoaded || donutLoaded)) {
+    console.log("✅ Attaching items to tray...");
+
+    const croissant = scene.getObjectByName("croissant");
+    const donut = scene.getObjectByName("donut");
+
+    if (trayObject) {
+      if (croissant) {
+        trayObject.add(croissant);
+        croissant.position.set(0, 20, -10); // Local position relative to tray
+        croissant.rotation.set(0, Math.PI / 3, 0); // Local rotation
+        croissant.scale.set(1.0, 1.0, 1.0); // Local scale
+        console.log("✅ Croissant attached to tray");
+      }
+      if (donut) {
+        trayObject.add(donut);
+        donut.position.set(0, 5, 30); // Local position relative to tray
+        donut.rotation.set(0, Math.PI / 3, 0); // Local rotation
+        donut.scale.set(1.0, 1.0, 1.0); // Local scale
+        console.log("✅ Donut attached to tray");
+      }
+    }
+  }
+}
+
 export function loadGLTFModels() {
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
@@ -375,7 +387,29 @@ export function loadGLTFModels() {
         });
 
         // Apply special materials if needed
-        if (model.name === "teapot") {
+        if (model.name === "tray") {
+          trayObject = object;
+          trayLoaded = true;
+          console.log("Tray loaded");
+
+          // If croissant and donut are already loaded, attach them now
+          attachItemsToTray();
+        } 
+        else if (model.name === "croissant") {
+          croissantLoaded = true;
+          console.log("Croissant loaded");
+
+          // If tray is already loaded, attach immediately
+          attachItemsToTray();
+        } 
+        else if (model.name === "donut") {
+          donutLoaded = true;
+          console.log("Donut loaded");
+
+          // If tray is already loaded, attach immediately
+          attachItemsToTray();
+        }
+        else if (model.name === "teapot") {
           object.traverse((node) => {
             if (node.isMesh) {
               applyTeapotMaterial(node);
@@ -391,12 +425,12 @@ export function loadGLTFModels() {
           });
         }
         else if (model.name === "capybara") {
-          // let meshIndex = 0;
-          // object.traverse((node) => {
-          //   if (node.isMesh) {
-          //     applyCapybaraMaterial(node, meshIndex++);
-          //   }
-          // });
+          let meshIndex = 0;
+          object.traverse((node) => {
+            if (node.isMesh) {
+              applyCapybaraMaterial(node, meshIndex++);
+            }
+          });
 
           object.userData.startPosition = object.position.clone();
           object.userData.targetPosition = new THREE.Vector3(-220, 110, 50);
@@ -471,19 +505,6 @@ export function loadGLTFModels() {
             signPhysics.init(signObject);
           }, 100);
         }
-        else if (model.name === "capy-sleeping"){
-          // let meshIndex = 0;
-          // object.traverse((node) => {
-          //   if (node.isMesh) {
-          //     applySleepingCapybaraMaterial(node, meshIndex)
-          //   }
-          // });
-          capySleep(object, gltf);
-        }
-        else if (model.name === "bubble") {
-          floating(object, gltf);
-        }
-        
 
         scene.add(object);
         console.log(`${model.name} loaded successfully`);
