@@ -267,6 +267,22 @@ export function updateAnimations(delta, elapsedTime) {
     const { sequenceStartOffset, duration, startPosition, targetPosition } = capybara.userData;
     const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
 
+    // Hard-coded door open time (2 seconds before capybara starts moving)
+    const doorOpenTime = 20; // Door opens at 20 seconds
+    if (sequenceTime >= doorOpenTime && sequenceTime < sequenceStartOffset && door?.userData?.doorAction) {
+      const doorAction = door.userData.doorAction;
+      const doorMixer = door.userData.doorMixer;
+
+      if (!doorAction.isRunning() && !door.userData.doorClosed) {
+        doorAction.paused = false;
+        doorAction.timeScale = 1; 
+        doorAction.play();
+        door.userData.doorClosing = false;
+        console.log("Door opening animation started at 20 seconds");
+      }
+    }
+
+    // Capybara starts moving at 22 seconds
     if (sequenceTime >= sequenceStartOffset) {
       const progress = Math.min((sequenceTime - sequenceStartOffset) / duration, 1);
       const newX = THREE.MathUtils.lerp(startPosition.x, targetPosition.x, progress);
@@ -275,58 +291,53 @@ export function updateAnimations(delta, elapsedTime) {
 
       capybara.position.set(newX, newY, newZ);
 
-      // Control door animation based on capybara's progress
-      if (door?.userData?.doorAction) {
+      if (door?.userData?.doorAction && progress < 1 && !door.userData.doorClosing) {
+        const doorAction = door.userData.doorAction;
+        const doorMixer = door.userData.doorMixer;
+        doorAction.time = doorAction.getClip().duration; 
+        doorMixer.update(0); 
+      }
+
+      if (door?.userData?.doorAction && progress === 1 && !door.userData.doorClosing) {
         const doorAction = door.userData.doorAction;
         const doorMixer = door.userData.doorMixer;
 
-        if (progress > 0 && progress < 0.5 && !doorAction.isRunning() && !door.userData.doorClosed) {
-          doorAction.paused = false;
-          doorAction.timeScale = 1; 
-          doorAction.play();
-          door.userData.doorClosing = false;
-        }
-         else if (progress >= 0.5 && progress < 1 && !door.userData.doorClosing) {
-          // Keep the door open while capybara is walking in
-          if (!door.userData.doorClosing) {
-            doorAction.time = doorAction.getClip().duration;
-        }
-          doorMixer.update(0);
-        } else if (progress === 1 && !door.userData.doorClosing) {
-          doorAction.timeScale = -1;
+        if (!door.userData.doorClosing) {
+          doorAction.timeScale = -1; 
           doorAction.paused = false;
           doorAction.time = doorAction.getClip().duration;
           doorAction.play();
           door.userData.doorClosing = true;
+          console.log("Door closing animation started");
         }
-        
-        if (doorAction.isRunning()) {
-          if (door.userData.doorClosing) {
-            doorAction.time = Math.max(doorAction.time - delta, 0);
-            if (doorAction.time <= 0) {
-              doorAction.stop();
-              door.userData.doorClosing = false;
-              door.userData.doorClosed = true;
-            }
-          } else {
-            doorMixer.update(delta);
-          }
-        }        
+      }
+
+      if (door?.userData?.doorAction?.isRunning() && door.userData.doorClosing) {
+        const doorAction = door.userData.doorAction;
+        const doorMixer = door.userData.doorMixer;
+        doorAction.time = Math.max(doorAction.time - delta, 0); 
+        if (doorAction.time <= 0) {
+          doorAction.stop();
+          door.userData.doorClosing = false;
+          door.userData.doorClosed = true;
+          console.log("Door fully closed");
+        }
       }
 
       if (miffy?.userData?.waveAction) {
         if (progress > 0 && progress < 1 && !miffy.userData.waveStarted) {
           miffy.userData.waveAction.play();
           miffy.userData.waveStarted = true;
+          console.log("Miffy started waving");
         } else if (progress === 1 && miffy.userData.waveStarted) {
           miffy.userData.waveAction.stop();
           miffy.userData.waveStarted = false;
+          console.log("Miffy stopped waving");
         }
       }
     }
   }
 
-  // Barista rotation and put down logic
   const barista = scene.getObjectByName("barista-miffy");
   if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== null) {
     const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;

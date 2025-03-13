@@ -446,7 +446,7 @@ export function loadGLTFModels() {
 
           object.userData.startPosition = object.position.clone();
           object.userData.targetPosition = new THREE.Vector3(-220, 110, 50);
-          object.userData.sequenceStartOffset = 12; // Start moving after 12 seconds
+          object.userData.sequenceStartOffset = 22; // Start moving after 12 seconds
           object.userData.duration = 4;
         }
 
