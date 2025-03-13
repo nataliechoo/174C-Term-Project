@@ -9,6 +9,8 @@ export let miffyPutdownMixer;
 export let cloudMixer;
 export let ovenOpenMixer;
 export let doorOpenMixer;
+export let capySleepMixer;
+export let bubbleMixer;
 
 /**
  * Setup Miffy wave animation
@@ -164,6 +166,30 @@ export function doorOpen(object, gltf) {
   action.play();
 }
 
+export function capySleep(object, gltf) {
+  scene.add(object);
+  capySleepMixer = new THREE.AnimationMixer(object);
+  const clips = gltf.animations;
+  const sleep = THREE.AnimationClip.findByName(clips, 'sleeping');
+
+  const action = capySleepMixer.clipAction(sleep);
+  console.log("ANIMATING SLEEPING CLIP");
+  console.log(sleep);
+  action.play();
+}
+
+export function floating(object, gltf) {
+  scene.add(object);
+  bubbleMixer = new THREE.AnimationMixer(object);
+  const clips = gltf.animations;
+  const floating = THREE.AnimationClip.findByName(clips, 'float');
+
+  const action = bubbleMixer.clipAction(floating);
+  console.log("ANIMATING FLOATING CLIP");
+  console.log(floating);
+  action.play();
+}
+
 export const mixers = [];
 
 export function updateAnimations(delta, elapsedTime) {
@@ -174,6 +200,8 @@ export function updateAnimations(delta, elapsedTime) {
     miffyPutdownMixer,
     ovenOpenMixer,
     doorOpenMixer,
+    capySleepMixer,
+    bubbleMixer,
     ...mixers
   ].forEach(mixer => {
     if (mixer) mixer.update(delta);

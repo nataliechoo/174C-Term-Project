@@ -2,12 +2,14 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { scene } from "../main.js";
-import { applyTeapotMaterial, applyMoonMesh, applyCapybaraMaterial } from "./materials.js";
+import { applyTeapotMaterial, applyMoonMesh, applyCapybaraMaterial, applySleepingCapybaraMaterial } from "./materials.js";
 import {
   miffyBarista,
   cloudAnimation,
   ovenOpen,
   doorOpen,
+  capySleep,
+  floating,
 } from "./animations.js";
 import { SignPhysics } from "../physics/SignPhysics.js";
 import { mixers } from "./animations.js";
@@ -19,12 +21,14 @@ export let signPhysics = null;
 
 //tray position (for items placed on it)
 export const trayPosition = new THREE.Vector3(-60, 260, 40);
+export const capysleepinPosition = new THREE.Vector3(700, 50, -350);
+
 
 // Model definitions
 export const models = [
   {
     name: "base",
-    path: "/assets/new-base/foundation-base2-transformed.glb",
+    path: "/assets/new-base/base-fixed-transformed.glb",
     position: new THREE.Vector3(-300, 0, 0),
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(3, 3, 3),
@@ -161,6 +165,20 @@ export const models = [
     scale: new THREE.Vector3(3, 3, 3),
   },
   {
+    name: "capy-sleeping",
+    path: "/assets/capybara-sleeping/capysleepin-test-transformed.glb",
+    position: capysleepinPosition,
+    rotation: new THREE.Euler(0, Math.PI, 0),
+    scale: new THREE.Vector3(.5, .5, .5),
+  },
+  {
+    name: "bubble",
+    path: "/assets/thought-bubble/thought-bubble-ani-transformed.glb",
+    position: capysleepinPosition.clone().add(new THREE.Vector3(-150, 30, 0)),
+    rotation: new THREE.Euler(0, -Math.PI/2, 0),
+    scale: new THREE.Vector3(1, 1, 1),
+  },
+  {
     name: "cashier-miffy",
     path: "/assets/miffy-animation/miffy-wave-fixed-arms-transformed.glb",
     position: new THREE.Vector3(-280, 110, -300),
@@ -195,6 +213,7 @@ export const models = [
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(5, 5, 5),
   },
+
 ];
 
 /**
@@ -332,12 +351,12 @@ export function loadGLTFModels() {
           });
         }
         else if (model.name === "capybara") {
-          let meshIndex = 0;
-          object.traverse((node) => {
-            if (node.isMesh) {
-              applyCapybaraMaterial(node, meshIndex++);
-            }
-          });
+          // let meshIndex = 0;
+          // object.traverse((node) => {
+          //   if (node.isMesh) {
+          //     applyCapybaraMaterial(node, meshIndex++);
+          //   }
+          // });
 
           // Set up movement parameters
           object.userData.startPosition = object.position.clone();
@@ -413,6 +432,19 @@ export function loadGLTFModels() {
             signPhysics.init(signObject);
           }, 100);
         }
+        else if (model.name === "capy-sleeping"){
+          // let meshIndex = 0;
+          // object.traverse((node) => {
+          //   if (node.isMesh) {
+          //     applySleepingCapybaraMaterial(node, meshIndex)
+          //   }
+          // });
+          capySleep(object, gltf);
+        }
+        else if (model.name === "bubble") {
+          floating(object, gltf);
+        }
+        
 
         scene.add(object);
         console.log(`${model.name} loaded successfully`);
