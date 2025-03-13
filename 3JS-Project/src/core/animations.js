@@ -10,6 +10,8 @@ export let cloudMixer;
 export let ovenOpenMixer;
 export let doorOpenMixer;
 
+export const mixers = [];
+
 /**
  * Setup Miffy wave animation
  */
@@ -23,13 +25,10 @@ export function setupMiffyWave(object, gltf) {
   if (waveClip) {
     const action = miffyWaveMixer.clipAction(waveClip);
     action.setLoop(THREE.LoopRepeat);
-    action.stop(); // Don't play immediately
-
-    // Store animation controls in object data
+    action.stop();
+    
     object.userData.waveAction = action;
-    object.userData.waveStartTime = 15; // Start at 15 seconds
     object.userData.waveStarted = false;
-
     console.log("Cashier Miffy wave animation ready");
   } else {
     console.warn("Waving animation not found for Cashier Miffy");
@@ -164,8 +163,6 @@ export function doorOpen(object, gltf) {
   action.play();
 }
 
-export const mixers = [];
-
 export function updateAnimations(delta, elapsedTime) {
   [
     miffyWaveMixer,
@@ -184,14 +181,38 @@ export function updateAnimations(delta, elapsedTime) {
   const miffy = scene.getObjectByName("cashier-miffy");
 
   if (capybara?.userData?.targetPosition) {
-    const { startTime, duration, startPosition, targetPosition } = capybara.userData;
+    const { 
+      sequenceStartOffset, // Seconds after animation sequence starts
+      duration, 
+      startPosition, 
+      targetPosition 
+    } = capybara.userData;
 
-    if (elapsedTime >= startTime) {
-      const progress = Math.min((elapsedTime - startTime) / duration, 1);
+    // Get time since animation sequence began
+    const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
+
+    // Debugging Logs
+    console.log("🔍 Capybara Movement Debug:");
+    console.log("Elapsed Time:", elapsedTime);
+    console.log("BEGIN_ANIMATION_SEQUENCE:", animationTiming.BEGIN_ANIMATION_SEQUENCE);
+    console.log("Sequence Time:", sequenceTime);
+    console.log("Sequence Start Offset:", sequenceStartOffset);
+    console.log("Capybara Target Position:", targetPosition);
+    console.log("Capybara Start Position:", startPosition);
+
+    if (sequenceTime >= sequenceStartOffset) {
+      const progress = Math.min(
+        (sequenceTime - sequenceStartOffset) / duration, 
+        1
+      );
+
+      console.log("Capybara Progress:", progress);
+
+      // Calculate new position
       const newX = THREE.MathUtils.lerp(startPosition.x, targetPosition.x, progress);
       const newZ = THREE.MathUtils.lerp(startPosition.z, targetPosition.z, progress);
 
-      // Bobbing effect while moving
+      // Bobbing effect
       let newY;
       if (progress < 1) {
         const bobHeight = 5;
@@ -202,22 +223,15 @@ export function updateAnimations(delta, elapsedTime) {
         newY = targetPosition.y;
       }
 
+      console.log(`Capybara Moving to: (${newX}, ${newY}, ${newZ})`);
       capybara.position.set(newX, newY, newZ);
 
-      // Start Miffy waving when movement starts
-      if (miffy?.userData?.waveAction && !miffy.userData.waveStarted) {
-        //console.log("Miffy starts waving as Capybara moves!");
-        miffy.userData.waveAction.play();
-        miffy.userData.waveStarted = true;
-      }
-
-      // Stop waving when movement completes
-      if (progress === 1) {
-        //console.log("Capybara reached target position.");
-        capybara.userData.targetPosition = null;
-
-        if (miffy?.userData?.waveAction) {
-          //console.log("Miffy stops waving");
+      // Control Miffy's waving
+      if (miffy?.userData?.waveAction) {
+        if (progress > 0 && progress < 1 && !miffy.userData.waveStarted) {
+          miffy.userData.waveAction.play();
+          miffy.userData.waveStarted = true;
+        } else if (progress === 1 && miffy.userData.waveStarted) {
           miffy.userData.waveAction.stop();
           miffy.userData.waveStarted = false;
         }
@@ -227,10 +241,11 @@ export function updateAnimations(delta, elapsedTime) {
 }
 
 
+
 export function configureCapybaraMovement(capybara, config) {
   capybara.userData.startPosition = config.startPosition;
   capybara.userData.targetPosition = config.targetPosition;
-  capybara.userData.startTime = config.startTime;
+  capybara.userData.sequenceStartOffset = config.sequenceStartOffset; // Seconds after sequence start
   capybara.userData.duration = config.duration;
 }
 
