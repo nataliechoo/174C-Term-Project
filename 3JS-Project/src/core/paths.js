@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { bspline_interpolate } from "./b-spline.js";
-import { scene } from "../main.js";
+import { animationTiming, scene } from "../main.js";
 import { starObject } from "./models.js";
 
 let starLight;
@@ -19,8 +19,8 @@ export function initStarLight() {
 
 // Camera path control points
 export const cameraControlPoints = [
-  [950, 400, -2950],
-  [950, 400, -2950],
+  [850, 600, -2750],
+  [850, 600, -2750],
   [250, 500, 0],
   [0, 500, 0],
   [-250, 500, 0],
@@ -129,12 +129,22 @@ export function updateCameraPath(camera, elapsedTime) {
 export function updateStarPath(elapsedTime) {
   if (!starObject || !starLight) return;
   
-  const starDuration = 4; // Adjust duration to control star speed
-  let starT = (elapsedTime % starDuration) / starDuration;
+  // Before BEGIN_ANIMATION_SEQUENCE starts, keep star at the first control point
+  if (animationTiming.BEGIN_ANIMATION_SEQUENCE === Infinity) {
+    const startPoint = starControlPoints[0];
+    starObject.position.set(startPoint[0], startPoint[1] - 100, startPoint[2]);
+    starLight.position.set(startPoint[0], startPoint[1] + 400, startPoint[2]); // Adjust light position
+    return;
+  } 
+
+  // After BEGIN_ANIMATION_SEQUENCE starts, move star along spline
+  const adjustedElapsedTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
+  const starDuration = 6; // Adjust duration to control star speed
+  let starT = (adjustedElapsedTime % starDuration) / starDuration;
+
   const starPos = bspline_interpolate(starT, starSplineDegree, starControlPoints);
 
   // Move the star with Y offset of -100
   starObject.position.set(starPos[0], starPos[1] - 100, starPos[2]);
-
-  starLight.position.set(starPos[0], starPos[1] +400, starPos[2]); // update star light to match star's position
+  starLight.position.set(starPos[0], starPos[1] + 400, starPos[2]); // Update light position to match star's position
 } 
