@@ -24,7 +24,7 @@ export const trayPosition = new THREE.Vector3(-60, 260, 40);
 export const models = [
   {
     name: "base",
-    path: "/assets/new-base/base-fixed-transformed.glb",
+    path: "/assets/new-base/foundation-base2-transformed.glb",
     position: new THREE.Vector3(-300, 0, 0),
     rotation: new THREE.Euler(0, Math.PI, 0),
     scale: new THREE.Vector3(3, 3, 3),
