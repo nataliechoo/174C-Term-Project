@@ -21,11 +21,13 @@ export function initStarLight() {
 export const cameraControlPoints = [
   [950, 600, -2550],
   [950, 600, -2550],
-  [250, 500, 0],
-  [0, 500, 0],
-  [-250, 500, 0],
-  [-500, 250, -250],
-  [-500, 250, -250]
+  [800, 500, -750],
+  [650, 500, 1000],
+  [250, 500, 1350],
+  [-150, 500, 1350], // this is where we pause to look at the sign?
+  [-500, 500, 800],
+  [-500, 500, 500],
+  [-500, 500, 500]
 ];
 
 // Star animation path control points
@@ -128,9 +130,10 @@ export function updateCameraPath(camera, elapsedTime) {
  */
 export function updateStarPath(elapsedTime) {
   if (!starObject || !starLight) return;
-  
+  const capySleepDuration = 7.5;
   // Before BEGIN_ANIMATION_SEQUENCE starts, keep star at the first control point
-  if (animationTiming.BEGIN_ANIMATION_SEQUENCE === Infinity) {
+  // hard coding condition until capybara scene finishes to begin movement.
+  if (animationTiming.BEGIN_ANIMATION_SEQUENCE === Infinity || (elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE < capySleepDuration)) {
     const startPoint = starControlPoints[0];
     starObject.position.set(startPoint[0], startPoint[1] - 100, startPoint[2]);
     starLight.position.set(startPoint[0], startPoint[1] + 400, startPoint[2]); // Adjust light position
@@ -138,7 +141,7 @@ export function updateStarPath(elapsedTime) {
   } 
 
   // After BEGIN_ANIMATION_SEQUENCE starts, move star along spline
-  const adjustedElapsedTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
+  const adjustedElapsedTime = elapsedTime - (animationTiming.BEGIN_ANIMATION_SEQUENCE + capySleepDuration);
   const starDuration = 7; // Adjust duration to control star speed
   let starT = (adjustedElapsedTime % starDuration) / starDuration;
 

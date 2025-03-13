@@ -39,7 +39,7 @@ export function setupEnvironment(scene, renderer) {
   return envMap;
 }
 
-export let keyLight, fillLight, backLight;
+export let keyLight, fillLight, backLight, capybaraLight;
 
 /**
  * Initialize lighting for scene
@@ -64,15 +64,19 @@ export function initLighting(scene) {
   backLight.position.set(100, 100, -100);
   scene.add(backLight);
 
+  capybaraLight = new THREE.PointLight(0xffff00, 1000, 2000); // Color, intensity, distance, decay
+  capybaraLight.position.set(-2700, 1000, -3500); // Position above the sleeping capybara
+  scene.add(capybaraLight);
+
   // Shadow settings
-  [keyLight, fillLight, backLight].forEach(light => {
+  [keyLight, fillLight, backLight, capybaraLight].forEach(light => {
     light.castShadow = true;
     scene.add(light);
   });
 
   // Higher quality shadows
-  keyLight.shadow.mapSize.width = 4096;
-  keyLight.shadow.mapSize.height = 4096;
+  keyLight.shadow.mapSize.width = 2048;
+  keyLight.shadow.mapSize.height = 2048;
 }
 
 /**

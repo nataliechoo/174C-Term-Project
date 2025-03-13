@@ -22,7 +22,7 @@ export let trayObject = null;
 
 //tray position (for items placed on it)
 export const trayPosition = new THREE.Vector3(-500, 230, -100);
-export const capysleepinPosition = new THREE.Vector3(700, 50, -350);
+export const capysleepinPosition = new THREE.Vector3(-2700, 50, -3500);
 
 // Model definitions
 export const models = [
@@ -524,6 +524,13 @@ export function loadGLTFModels() {
           //     applySleepingCapybaraMaterial(node, meshIndex)
           //   }
           // });
+          object.name = "capy-sleeping";
+          object.traverse((node) => {
+            if (node.isMesh) {
+              // node.castShadow = true;
+              // node.receiveShadow = true;
+            }
+          });
           capySleep(object, gltf);
         }
         else if (model.name === "bubble") {

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import "./styles.css";
 
 // Import core modules
-import { loadGLTFModels, signPhysics, createControls, starObject } from "./core/models.js";
+import { loadGLTFModels, signPhysics, createControls, starObject, capysleepinPosition } from "./core/models.js";
 import { updateAnimations } from "./core/animations.js";
 import { initSplinePaths, updateCameraPath, updateStarPath, initStarLight, cameraControlPoints } from "./core/paths.js";
 import { 
@@ -22,6 +22,7 @@ import {
   keyLight,
   fillLight,
   backLight,
+  capybaraLight,
 } from "./core/renderer.js";
 import { createGround } from "./core/ground.js";
 
@@ -33,9 +34,13 @@ const FPS_LIMIT = 60;
 const TIME_STEP = 1 / FPS_LIMIT;
 
 let pathStartTime = null; // Track when camera starts moving along spline
-let blackoutStartTime = null; // Track when blackout starts
-let blackoutRemoved = false; // Flag to track if blackout has been removed
+let firstBlackoutStartTime = null; // Track when blackout starts
+let secondBlackoutStartTime = null;
+let capybaraRemoved = false;
+let firstBlackoutRemoved = false; // Flag to track if blackout has been removed
+let secondBlackoutRemoved = false;
 let lightsEnabled = false; // Flag to track if lights should stay enabled permanently
+
 export const animationTiming  = {
   BEGIN_ANIMATION_SEQUENCE: Infinity // Time sampled when blackout starts
 } 
@@ -89,56 +94,137 @@ function removeBlackout() {
       document.body.removeChild(blackoutDiv); // Safely remove it from the DOM
       console.log("Blackout removed.");
   } else {
-      console.warn("Blackout div not found.");
+      //console.warn("Blackout div not found.");
   }
 }
 
 function handlePathMode(elapsedTime) {
-    const stationaryDuration = 6; // Time to remain stationary before blackout
-    const blackoutDuration = 3;   // Duration of blackout effect
-
-    if (!pathStartTime) {
-        // Initial setup: Camera looks at cloud and moves to first control point
-        const cloud = scene.getObjectByName("cloud");
-        if (cloud) {
-            const cloudWorldPosition = new THREE.Vector3();
-            cloud.getWorldPosition(cloudWorldPosition);
-            camera.lookAt(cloudWorldPosition);
-        }
-
-        const startPoint = cameraControlPoints[0];
-        camera.position.set(startPoint[0], startPoint[1], startPoint[2]);
-
-        pathStartTime = elapsedTime; // Record when PATH starts
-        return;
-    }
-
-    if (elapsedTime < pathStartTime + stationaryDuration) {
-        // During stationary phase, do nothing (camera stays still)
-        return;
-    }
-
-    if (!blackoutStartTime) {
-        // Start blackout effect after stationary phase
-        createBlackout();
-        blackoutStartTime = elapsedTime; // Record start time of blackout
-        return;
-    }
-
-    if ((elapsedTime >= blackoutStartTime + blackoutDuration) && !blackoutRemoved) {
-        // End blackout and start moving along spline
-        removeBlackout();
-        [keyLight, fillLight, backLight].forEach(light => light.visible = true); // Enable lights permanently
-        lightsEnabled = true;
-        blackoutRemoved = true;
-        console.log("Blackout removed at:", elapsedTime);
-    }
-
-    if (blackoutRemoved) {
-      // After blackout ends, move the camera along the spline
-      const adjustedElapsedTime = elapsedTime - (pathStartTime + stationaryDuration + blackoutDuration);
-      updateCameraPath(camera, adjustedElapsedTime); // Start moving camera along spline
+  if (animationTiming.BEGIN_ANIMATION_SEQUENCE === Infinity) {
+    console.warn("BEGIN_ANIMATION_SEQUENCE has not been set.");
+    return;
   }
+
+  // Calculate relative elapsed time based on BEGIN_ANIMATION_SEQUENCE
+  const relativeElapsedTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
+
+  // Define durations for each phase
+  const stationaryDuration = 6; // Time to view sleeping capybara
+  const firstBlackoutDuration = 1; // Duration of first blackout
+  const starViewDuration = 7; // Time to watch star animation
+  const secondBlackoutDuration = 3; // Duration of second blackout
+
+  // Background lerp logic during final transition phase
+  const transitionStartTime =
+    animationTiming.BEGIN_ANIMATION_SEQUENCE +
+    stationaryDuration +
+    firstBlackoutDuration +
+    starViewDuration +
+    secondBlackoutDuration;
+
+  // Scene 1: View sleeping capybara
+  if (relativeElapsedTime < stationaryDuration) {
+    camera.position.copy(capysleepinPosition.clone().add(new THREE.Vector3(0, 200, 400)));
+    camera.lookAt(capysleepinPosition);
+
+    scene.environment = null;
+    [keyLight, fillLight, backLight].forEach(light => light.visible = true); // Turn off main lights
+    capybaraLight.visible = true;
+    // console.log("Capybara light is :", capybaraLight.visible)
+    
+
+    return;
+  }
+
+  // Scene 1 END: Trigger first blackout
+  if (relativeElapsedTime >= stationaryDuration && relativeElapsedTime < stationaryDuration + firstBlackoutDuration) {
+    if (!firstBlackoutStartTime) {
+      createBlackout();
+      firstBlackoutStartTime = elapsedTime; // Record start time of blackout
+      
+    }
+    return;
+  }
+
+  // During first blackout: teleport camera and remove capybara
+  if (relativeElapsedTime >= stationaryDuration + firstBlackoutDuration && !capybaraRemoved) {
+    const startPoint = cameraControlPoints[0];
+    camera.position.set(startPoint[0], startPoint[1], startPoint[2]);
+
+    capybaraLight.visible = false;
+    [keyLight, fillLight, backLight].forEach(light => light.visible = false); // Turn off main lights
+
+    const capybara = scene.getObjectByName("capy-sleeping");
+    if (capybara) scene.remove(capybara);
+
+    capybaraLight.visible = false; // Turn off light after removal
+    capybaraRemoved = true;
+
+    const cloud = scene.getObjectByName("cloud");
+    if (cloud) {
+      const cloudWorldPosition = new THREE.Vector3();
+      cloud.getWorldPosition(cloudWorldPosition);
+      camera.lookAt(cloudWorldPosition);
+    }
+
+    removeBlackout(); // End first blackout
+    return;
+  }
+
+  // Remove first blackout and begin watching star animation
+  if (!firstBlackoutRemoved && elapsedTime >= firstBlackoutStartTime + firstBlackoutDuration) {
+    removeBlackout();
+    firstBlackoutRemoved = true;
+    return;
+  }
+
+  // SCENE 2 - Star gazing:
+  if (relativeElapsedTime >= stationaryDuration + firstBlackoutDuration && relativeElapsedTime < stationaryDuration + firstBlackoutDuration + starViewDuration) {
+    // updateStarPath(relativeElapsedTime - (stationaryDuration + firstBlackoutDuration)); // Animate star movement
+    // do nothing, just stare :)
+    return;
+  }
+
+  // SCENE 2 END: Trigger 2nd blackout
+  if (relativeElapsedTime >= stationaryDuration + firstBlackoutDuration + starViewDuration && relativeElapsedTime < stationaryDuration + firstBlackoutDuration + starViewDuration + secondBlackoutDuration) {
+    if (!secondBlackoutStartTime) {
+      createBlackout();
+      secondBlackoutStartTime = elapsedTime; // Record start time of second blackout
+      [keyLight, fillLight, backLight].forEach(light => light.visible = true); // Turn on main lights
+      scene.environment = envMap
+    }
+    return;
+  }
+
+  // SCENE 3+ TRANSITION:
+  if (relativeElapsedTime >= stationaryDuration + firstBlackoutDuration + starViewDuration + secondBlackoutDuration) {
+    removeBlackout();
+
+    startBackgroundLerp(animationTiming.BEGIN_ANIMATION_SEQUENCE + stationaryDuration + firstBlackoutDuration + starViewDuration + secondBlackoutDuration); // Begin background color transition
+
+    const adjustedElapsedTime =
+      relativeElapsedTime - (stationaryDuration + firstBlackoutDuration + starViewDuration + secondBlackoutDuration);
+    
+    updateCameraPath(camera, adjustedElapsedTime); // Move camera along spline path
+  }
+}
+
+function startBackgroundLerp(startTime) {
+  const lerpDuration = 12; // Duration of background color transition in seconds
+
+  function lerpBackgroundColor(elapsedTime) {
+    const progress = Math.min((elapsedTime - startTime) / lerpDuration, 1);
+    
+    const blackColor = new THREE.Color(0x000000);
+    const blueColor = new THREE.Color(0x87ceeb);
+
+    scene.background.copy(blackColor).lerp(blueColor, progress);
+
+    if (progress < 1) {
+      requestAnimationFrame(() => lerpBackgroundColor(clock.getElapsedTime()));
+    }
+  }
+
+  requestAnimationFrame(() => lerpBackgroundColor(clock.getElapsedTime()));
 }
 
 
@@ -244,11 +330,6 @@ function animate() {
   const delta = clock.getDelta();
   const elapsedTime = clock.getElapsedTime();
   const currentTime = performance.now();
-  
-  const blackColor = new THREE.Color(0x000000);
-  const blueColor = new THREE.Color(0x87ceeb);
-  
-
 
   // Calculate physics delta time (clamped to avoid large jumps)
   const physicsDeltaTime = Math.min((currentTime - lastPhysicsTime) / 1000, 0.1);
@@ -279,35 +360,12 @@ function animate() {
       break;
     
     case CAMERA_MODE.PATH:
-      // Camera follows the B-spline path
+      // Begin Scene transitioning
       handlePathMode(elapsedTime);
-      if (!lightsEnabled) {
-        [keyLight, fillLight, backLight].forEach(light => light.visible = false); // Disable lights temporarily
-        scene.environment = null;
-      } else {
-          [keyLight, fillLight, backLight].forEach(light => light.visible = true); // Ensure lights stay enabled permanently
-          scene.environment = envMap;
-      }
-
-      // Start lerping only after BEGIN_ANIMATION_SEQUENCE is set
-      if (animationTiming.BEGIN_ANIMATION_SEQUENCE !== Infinity) {
-        const transitionStartTime = animationTiming.BEGIN_ANIMATION_SEQUENCE + 6; // as animation sequence begins
-        const actualLerpDuration = 12; // Lerp duration (12 seconds)
-        
-      if (elapsedTime >= transitionStartTime && elapsedTime <= transitionStartTime + actualLerpDuration) {
-          const lerpFactor = (elapsedTime - transitionStartTime) / actualLerpDuration;
-          scene.background.copy(blackColor).lerp(blueColor, lerpFactor);
-          [keyLight, fillLight, backLight].forEach(light => light.visible = true);
-          renderer.toneMappingExposure = 0.5; // final exposure
-          scene.environment = envMap;
-      } else if (elapsedTime > transitionStartTime + actualLerpDuration) {
-          scene.background.copy(blueColor); // Final background color
-      }
-    }
       break;
   }
 
-  // Update star position along its path
+  // // Update star position along its path
   updateStarPath(elapsedTime);
   
   // Update all animation mixers
