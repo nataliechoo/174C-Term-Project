@@ -38,7 +38,7 @@ export const models = [
     path: "/assets/oven/oven-transformed.glb",
     position: new THREE.Vector3(-500, 265, -500),
     rotation: new THREE.Euler(0, Math.PI, 0),
-    scale: new THREE.Vector3(1, 1, 1),
+    scale: new THREE.Vector3(1.5, 1.5, 1.5),
   },
   {
     name: "table",
@@ -221,9 +221,10 @@ export const models = [
  * @param {Function} initCameraMode - Function to initialize camera mode
  * @param {Object} cameraModes - Camera mode constants
  * @param {Number} currentMode - Current camera mode
+ * @param {Object} croissantBaker - Croissant baker instance (optional)
  * @returns {Object} UI container and controls
  */
-export function createControls(initCameraMode, cameraModes, currentMode) {
+export function createControls(initCameraMode, cameraModes, currentMode, croissantBaker) {
   const container = document.createElement("div");
   container.style.position = "absolute";
   container.style.top = "10px";
@@ -271,6 +272,18 @@ export function createControls(initCameraMode, cameraModes, currentMode) {
   physicsButton.style.padding = "5px";
   physicsButton.style.width = "100%";
   physicsButton.style.cursor = "pointer";
+  physicsButton.style.marginBottom = "10px";
+
+  // Croissant baking button
+  const croissantButton = document.createElement("button");
+  croissantButton.textContent = "Start Baking Croissant";
+  croissantButton.style.padding = "5px";
+  croissantButton.style.width = "100%";
+  croissantButton.style.cursor = "pointer";
+  croissantButton.style.marginBottom = "10px";
+  
+  // Only show if croissant baker is provided
+  croissantButton.style.display = croissantBaker ? "block" : "none";
 
   // Add section divider
   const divider = document.createElement("hr");
@@ -280,8 +293,15 @@ export function createControls(initCameraMode, cameraModes, currentMode) {
   divider.style.borderTop = "1px solid rgba(255, 255, 255, 0.3)";
 
   container.appendChild(cameraButton);
-  container.appendChild(divider);
+  container.appendChild(divider.cloneNode());
   container.appendChild(physicsButton);
+  
+  // Add croissant baking button if baker is provided
+  if (croissantBaker) {
+    container.appendChild(divider.cloneNode());
+    container.appendChild(croissantButton);
+  }
+  
   document.body.appendChild(container);
 
   // Event handler for combined physics toggle
@@ -301,12 +321,32 @@ export function createControls(initCameraMode, cameraModes, currentMode) {
     }
   });
 
+  // Event handler for croissant baking toggle
+  let isBaking = false;
+  
+  if (croissantBaker) {
+    croissantButton.addEventListener("click", () => {
+      if (!isBaking) {
+        croissantButton.textContent = "Baking...";
+        isBaking = true;
+        
+        croissantBaker.startBakingSequence(() => {
+          croissantButton.textContent = "Reset Croissant";
+        });
+      } else {
+        croissantBaker.reset();
+        croissantButton.textContent = "Start Baking Croissant";
+        isBaking = false;
+      }
+    });
+  }
+
   // Initialize camera toggle if function is provided
   if (initCameraMode) {
     initCameraMode(cameraButton);
   }
 
-  return { container, cameraButton, physicsButton };
+  return { container, cameraButton, physicsButton, croissantButton };
 }
 
 /**

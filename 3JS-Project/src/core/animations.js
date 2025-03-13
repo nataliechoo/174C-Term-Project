@@ -187,7 +187,7 @@ export function floating(object, gltf) {
   action.play();
 }
 
-// export const mixers = [];
+export const mixers = [];
 
 export function updateAnimations(delta, elapsedTime) {
   [
@@ -220,13 +220,13 @@ export function updateAnimations(delta, elapsedTime) {
     const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
 
     // Debugging Logs
-    console.log("🔍 Capybara Movement Debug:");
-    console.log("Elapsed Time:", elapsedTime);
-    console.log("BEGIN_ANIMATION_SEQUENCE:", animationTiming.BEGIN_ANIMATION_SEQUENCE);
-    console.log("Sequence Time:", sequenceTime);
-    console.log("Sequence Start Offset:", sequenceStartOffset);
-    console.log("Capybara Target Position:", targetPosition);
-    console.log("Capybara Start Position:", startPosition);
+    // console.log("🔍 Capybara Movement Debug:");
+    // console.log("Elapsed Time:", elapsedTime);
+    // console.log("BEGIN_ANIMATION_SEQUENCE:", animationTiming.BEGIN_ANIMATION_SEQUENCE);
+    // console.log("Sequence Time:", sequenceTime);
+    // console.log("Sequence Start Offset:", sequenceStartOffset);
+    // console.log("Capybara Target Position:", targetPosition);
+    // console.log("Capybara Start Position:", startPosition);
 
     if (sequenceTime >= sequenceStartOffset) {
       const progress = Math.min(

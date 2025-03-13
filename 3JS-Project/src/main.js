@@ -25,6 +25,9 @@ import {
 } from "./core/renderer.js";
 import { createGround } from "./core/ground.js";
 
+// Import physics modules
+import { CroissantBaker } from "./physics/CroissantBaker.js";
+
 // Global constants and settings
 const FPS_LIMIT = 60;
 const TIME_STEP = 1 / FPS_LIMIT;
@@ -40,6 +43,11 @@ export const animationTiming  = {
 // Time tracking for physics
 let lastPhysicsTime = 0;
 let accumulatedTime = 0;
+
+// Initialize croissant baker
+let croissantBaker = null;
+let ovenObject = null;
+let croissantObject = null;
 
 // Initialize core components
 THREE.Cache.enabled = true;
@@ -158,11 +166,11 @@ window.addEventListener('resize', () => {
  */
 function init() {
   // Create combined controls UI for camera and physics
-  createControls(
+  const controls = createControls(
     initCameraToggle, // Pass camera toggle initializer
     CAMERA_MODE,      // Pass camera mode constants
     cameraMode,       // Pass current camera mode
-    clock             // 3js clock counter
+    null              // We'll set the croissant baker later
   );
   
   // Setup keyboard shortcuts for camera movement
@@ -170,6 +178,48 @@ function init() {
   
   // Load all models
   loadGLTFModels();
+  
+  // Setup polling to check when models are loaded
+  const checkForModels = () => {
+    // Find oven and croissant models for the baker
+    ovenObject = scene.getObjectByName("oven");
+    croissantObject = scene.getObjectByName("croissant");
+    
+    if (ovenObject && croissantObject) {
+      console.log("Found oven and croissant objects:", 
+                  {oven: ovenObject.name, croissant: croissantObject.name});
+      
+      // Initialize the croissant baker
+      croissantBaker = new CroissantBaker(scene);
+      croissantBaker.init(ovenObject, croissantObject, {
+        heatingDuration: 15,  // 15 seconds heating in the oven
+        coolingDuration: 10   // 10 seconds cooling after removal
+      });
+      console.log("CroissantBaker initialized with oven and croissant objects");
+      
+      // Update controls with the croissant baker
+      const controlsContainer = document.querySelector('div[style*="position: absolute"]');
+      if (controlsContainer) {
+        // Remove the old controls container
+        controlsContainer.remove();
+        
+        // Create new controls with the croissant baker
+        createControls(
+          initCameraToggle,
+          CAMERA_MODE,
+          cameraMode,
+          croissantBaker
+        );
+      }
+    } else {
+      console.log("Waiting for models to load...");
+      // Try again in 200ms
+      setTimeout(checkForModels, 200);
+    }
+  };
+  
+  // Start polling after a brief delay to give models time to start loading
+  setTimeout(checkForModels, 500);
 
   initStarLight();
   createGround();
@@ -212,6 +262,12 @@ function animate() {
     if (signPhysics && signPhysics.initialized) {
       signPhysics.update(TIME_STEP);
     }
+    
+    // Update croissant baker if initialized
+    if (croissantBaker && croissantBaker.initialized) {
+      croissantBaker.update(TIME_STEP);
+    }
+    
     accumulatedTime -= TIME_STEP;
   }
 
