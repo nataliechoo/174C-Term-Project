@@ -19,8 +19,8 @@ export function initStarLight() {
 
 // Camera path control points
 export const cameraControlPoints = [
-  [850, 600, -2750],
-  [850, 600, -2750],
+  [950, 600, -2550],
+  [950, 600, -2550],
   [250, 500, 0],
   [0, 500, 0],
   [-250, 500, 0],
@@ -139,7 +139,7 @@ export function updateStarPath(elapsedTime) {
 
   // After BEGIN_ANIMATION_SEQUENCE starts, move star along spline
   const adjustedElapsedTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
-  const starDuration = 6; // Adjust duration to control star speed
+  const starDuration = 7; // Adjust duration to control star speed
   let starT = (adjustedElapsedTime % starDuration) / starDuration;
 
   const starPos = bspline_interpolate(starT, starSplineDegree, starControlPoints);
@@ -147,4 +147,9 @@ export function updateStarPath(elapsedTime) {
   // Move the star with Y offset of -100
   starObject.position.set(starPos[0], starPos[1] - 100, starPos[2]);
   starLight.position.set(starPos[0], starPos[1] + 400, starPos[2]); // Update light position to match star's position
+  // Add slow rotation to the star
+  const rotationSpeedX = 0.008; // Rotation speed around X-axis
+
+  starObject.rotation.x += rotationSpeedX; // Rotate around the Y-axis
 } 
+
