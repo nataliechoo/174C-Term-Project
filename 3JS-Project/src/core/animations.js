@@ -210,12 +210,23 @@ export function doorOpen(object, gltf) {
   scene.add(object);
   doorOpenMixer = new THREE.AnimationMixer(object);
   const clips = gltf.animations;
-  const open = THREE.AnimationClip.findByName(clips, 'open');
+  const openClip = THREE.AnimationClip.findByName(clips, 'open');
 
-  const action = doorOpenMixer.clipAction(open);
-  console.log("ANIMATING DOOR OPENING CLIP");
-  console.log(open);
-  action.play();
+  if (openClip) {
+    const action = doorOpenMixer.clipAction(openClip);
+    action.setLoop(THREE.LoopOnce); 
+    action.clampWhenFinished = true; 
+    action.paused = true;
+
+    object.userData.doorAction = action;
+    object.userData.doorMixer = doorOpenMixer;
+    object.userData.doorOpenProgress = 0; 
+    object.userData.doorClosing = false;
+
+    console.log("Door animation ready");
+  } else {
+    console.warn("Door open animation not found");
+  }
 }
 
 export function capySleep(object, gltf) {
@@ -250,19 +261,11 @@ export function updateAnimations(delta, elapsedTime) {
   // Capybara movement logic
   const capybara = scene.getObjectByName("capybara");
   const miffy = scene.getObjectByName("cashier-miffy");
+  const door = scene.getObjectByName("base");
 
   if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== null) {
     const { sequenceStartOffset, duration, startPosition, targetPosition } = capybara.userData;
     const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
-
-    // Debugging Logs
-    // console.log("🔍 Capybara Movement Debug:");
-    // console.log("Elapsed Time:", elapsedTime);
-    // console.log("BEGIN_ANIMATION_SEQUENCE:", animationTiming.BEGIN_ANIMATION_SEQUENCE);
-    // console.log("Sequence Time:", sequenceTime);
-    // console.log("Sequence Start Offset:", sequenceStartOffset);
-    // console.log("Capybara Target Position:", targetPosition);
-    // console.log("Capybara Start Position:", startPosition);
 
     if (sequenceTime >= sequenceStartOffset) {
       const progress = Math.min((sequenceTime - sequenceStartOffset) / duration, 1);
@@ -271,6 +274,45 @@ export function updateAnimations(delta, elapsedTime) {
       const newY = progress < 1 ? THREE.MathUtils.lerp(startPosition.y, targetPosition.y, progress) + Math.sin(elapsedTime * 10) * 5 : targetPosition.y;
 
       capybara.position.set(newX, newY, newZ);
+
+      // Control door animation based on capybara's progress
+      if (door?.userData?.doorAction) {
+        const doorAction = door.userData.doorAction;
+        const doorMixer = door.userData.doorMixer;
+
+        if (progress > 0 && progress < 0.5 && !doorAction.isRunning() && !door.userData.doorClosed) {
+          doorAction.paused = false;
+          doorAction.timeScale = 1; 
+          doorAction.play();
+          door.userData.doorClosing = false;
+        }
+         else if (progress >= 0.5 && progress < 1 && !door.userData.doorClosing) {
+          // Keep the door open while capybara is walking in
+          if (!door.userData.doorClosing) {
+            doorAction.time = doorAction.getClip().duration;
+        }
+          doorMixer.update(0);
+        } else if (progress === 1 && !door.userData.doorClosing) {
+          doorAction.timeScale = -1;
+          doorAction.paused = false;
+          doorAction.time = doorAction.getClip().duration;
+          doorAction.play();
+          door.userData.doorClosing = true;
+        }
+        
+        if (doorAction.isRunning()) {
+          if (door.userData.doorClosing) {
+            doorAction.time = Math.max(doorAction.time - delta, 0);
+            if (doorAction.time <= 0) {
+              doorAction.stop();
+              door.userData.doorClosing = false;
+              door.userData.doorClosed = true;
+            }
+          } else {
+            doorMixer.update(delta);
+          }
+        }        
+      }
 
       if (miffy?.userData?.waveAction) {
         if (progress > 0 && progress < 1 && !miffy.userData.waveStarted) {
@@ -336,7 +378,6 @@ export function updateAnimations(delta, elapsedTime) {
     }
   }
 }
-
 /**
  * Configure Capybara movement
  */

@@ -153,7 +153,7 @@ export const models = [
   {
     name: "capybara",
     path: "/assets/capybara/capy-edited-in-blender-transformed.glb",
-    position: new THREE.Vector3(-500, 150, 600),
+    position: new THREE.Vector3(-500, 150, 800),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
     scale: new THREE.Vector3(0.4, 0.4, 0.4),
   },
@@ -365,16 +365,15 @@ function attachItemsToTray() {
     if (trayObject) {
       if (croissant) {
         trayObject.add(croissant);
-        croissant.position.set(0, 20, -10); // Local position relative to tray
-        croissant.rotation.set(0, Math.PI / 3, 0); // Local rotation
-        croissant.scale.set(1.0, 1.0, 1.0); // Local scale
-        console.log("✅ Croissant attached to tray");
+        croissant.position.set(0, 20, -10);
+        croissant.rotation.set(0, Math.PI / 3, 0);
+        croissant.scale.set(1.0, 1.0, 1.0); 
       }
       if (donut) {
         trayObject.add(donut);
-        donut.position.set(0, 5, 30); // Local position relative to tray
-        donut.rotation.set(0, Math.PI / 3, 0); // Local rotation
-        donut.scale.set(1.0, 1.0, 1.0); // Local scale
+        donut.position.set(0, 5, 30); 
+        donut.rotation.set(0, Math.PI / 3, 0);
+        donut.scale.set(1.0, 1.0, 1.0);
         console.log("✅ Donut attached to tray");
       }
     }
@@ -403,27 +402,23 @@ export function loadGLTFModels() {
           }
         });
 
-        // Apply special materials if needed
         if (model.name === "tray") {
           trayObject = object;
           trayLoaded = true;
           console.log("Tray loaded");
 
-          // If croissant and donut are already loaded, attach them now
           attachItemsToTray();
         } 
         else if (model.name === "croissant") {
           croissantLoaded = true;
           console.log("Croissant loaded");
 
-          // If tray is already loaded, attach immediately
           attachItemsToTray();
         } 
         else if (model.name === "donut") {
           donutLoaded = true;
           console.log("Donut loaded");
 
-          // If tray is already loaded, attach immediately
           attachItemsToTray();
         }
         else if (model.name === "teapot") {
@@ -461,7 +456,7 @@ export function loadGLTFModels() {
 
           if (clip) {
             const action = mixer.clipAction(clip);
-            action.setLoop(THREE.LoopRepeat); // Set looping here
+            action.setLoop(THREE.LoopRepeat); 
             action.stop(); // Prevent auto-play
 
             object.userData.waveAction = action;
