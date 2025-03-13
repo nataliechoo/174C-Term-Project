@@ -10,6 +10,8 @@ export let miffyPutdownMixer;
 export let cloudMixer;
 export let ovenOpenMixer;
 export let doorOpenMixer;
+export let capySleepMixer;
+export let bubbleMixer;
 
 export const mixers = [];
 
@@ -242,7 +244,7 @@ export function floating(object, gltf) {
 
 
 export function updateAnimations(delta, elapsedTime) {
-  [miffyWaveMixer, miffyPickupMixer, miffyHoldingMixer, miffyPutdownMixer, ovenOpenMixer, doorOpenMixer, ...mixers]
+  [miffyWaveMixer, miffyPickupMixer, miffyHoldingMixer, miffyPutdownMixer, ovenOpenMixer, doorOpenMixer, capySleepMixer, bubbleMixer, ...mixers]
     .forEach(mixer => mixer?.update(delta));
 
   // Capybara movement logic
