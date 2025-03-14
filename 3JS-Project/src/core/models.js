@@ -220,10 +220,9 @@ export const models = [
  * @param {Function} initCameraMode - Function to initialize camera mode
  * @param {Object} cameraModes - Camera mode constants
  * @param {Number} currentMode - Current camera mode
- * @param {Object} croissantBaker - Croissant baker instance (optional)
  * @returns {Object} UI container and controls
  */
-export function createControls(initCameraMode, cameraModes, currentMode, croissantBaker) {
+export function createControls(initCameraMode, cameraModes, currentMode) {
   const container = document.createElement("div");
   container.style.position = "absolute";
   container.style.top = "10px";
@@ -249,6 +248,12 @@ export function createControls(initCameraMode, cameraModes, currentMode, croissa
   cameraButton.style.width = "100%";
   cameraButton.style.marginBottom = "10px";
   cameraButton.style.cursor = "pointer";
+  
+  // Initially disable the camera button until everything is loaded
+  cameraButton.disabled = true;
+  cameraButton.style.opacity = "0.5";
+  cameraButton.style.cursor = "not-allowed";
+  cameraButton.title = "Loading scene... Please wait";
 
   // Set initial camera button text based on current mode
   if (cameraModes && currentMode !== undefined) {
@@ -273,17 +278,6 @@ export function createControls(initCameraMode, cameraModes, currentMode, croissa
   physicsButton.style.cursor = "pointer";
   physicsButton.style.marginBottom = "10px";
 
-  // Croissant baking button
-  const croissantButton = document.createElement("button");
-  croissantButton.textContent = "Start Baking Croissant";
-  croissantButton.style.padding = "5px";
-  croissantButton.style.width = "100%";
-  croissantButton.style.cursor = "pointer";
-  croissantButton.style.marginBottom = "10px";
-  
-  // Only show if croissant baker is provided
-  croissantButton.style.display = croissantBaker ? "block" : "none";
-
   // Add section divider
   const divider = document.createElement("hr");
   divider.style.marginTop = "10px";
@@ -294,12 +288,6 @@ export function createControls(initCameraMode, cameraModes, currentMode, croissa
   container.appendChild(cameraButton);
   container.appendChild(divider.cloneNode());
   container.appendChild(physicsButton);
-  
-  // Add croissant baking button if baker is provided
-  if (croissantBaker) {
-    container.appendChild(divider.cloneNode());
-    container.appendChild(croissantButton);
-  }
   
   document.body.appendChild(container);
 
@@ -320,32 +308,12 @@ export function createControls(initCameraMode, cameraModes, currentMode, croissa
     }
   });
 
-  // Event handler for croissant baking toggle
-  let isBaking = false;
-  
-  if (croissantBaker) {
-    croissantButton.addEventListener("click", () => {
-      if (!isBaking) {
-        croissantButton.textContent = "Baking...";
-        isBaking = true;
-        
-        croissantBaker.startBakingSequence(() => {
-          croissantButton.textContent = "Reset Croissant";
-        });
-      } else {
-        croissantBaker.reset();
-        croissantButton.textContent = "Start Baking Croissant";
-        isBaking = false;
-      }
-    });
-  }
-
   // Initialize camera toggle if function is provided
   if (initCameraMode) {
     initCameraMode(cameraButton);
   }
 
-  return { container, cameraButton, physicsButton, croissantButton };
+  return { container, cameraButton, physicsButton };
 }
 
 /**

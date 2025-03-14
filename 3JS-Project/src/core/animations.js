@@ -2,6 +2,9 @@ import * as THREE from "three";
 import { scene, animationTiming } from "../main.js";
 import { trayObject } from "./models.js";
 
+// Add reference to fetch croissant baker from main
+let croissantBaker = null;
+
 // Animation mixers
 export let miffyWaveMixer;
 export let miffyPickupMixer;
@@ -106,22 +109,48 @@ export function miffyBarista(object, gltf) {
     mixer.addEventListener('finished', (e) => {
       if (e.action === putdownAction && trayObject) {
         if (trayObject.parent) {
+          // Find the croissant and remove it from the tray before placing tray
+          const croissant = scene.getObjectByName("croissant");
+          if (croissant && croissant.parent === trayObject) {
+            // Detach croissant from tray before placing tray
+            scene.attach(croissant);
+            
+            // Save position for later re-attachment
+            const worldPos = new THREE.Vector3();
+            croissant.getWorldPosition(worldPos);
+            croissant.userData.originalWorldPosition = worldPos.clone();
+            
+            // Start baking process if baker is available
+            if (croissantBaker && !croissantBaker.userData?.bakingStarted) {
+              console.log("Starting croissant baking early in the animation sequence");
+              croissantBaker.userData = croissantBaker.userData || {};
+              croissantBaker.userData.bakingStarted = true;
+              croissantBaker.userData.isAnimationSequence = true;
+              
+              croissantBaker.startBakingSequence(() => {
+                console.log("Croissant baking completed from animation");
+                
+                // The croissant is already on the tray now, no need to re-attach it
+                // Just make sure it's visible and fully "done"
+                const croissant = scene.getObjectByName("croissant");
+                if (croissant) {
+                  // Ensure the croissant is visible
+                  croissant.visible = true;
+                  console.log("Baking sequence completed - croissant should be visible on tray");
+                }
+              });
+            }
+          }
+          
+          // Now place the tray at its final position
           scene.attach(trayObject); 
           trayObject.position.set(-380, 260, -500); 
           trayObject.rotation.set(0, Math.PI * 16, 0);
           trayObject.scale.set(1.5, 1.5, 1.5);
           console.log("Tray placed at final position!");
     
-          const croissant = scene.getObjectByName("croissant");
+          // Keep donut on the tray
           const donut = scene.getObjectByName("donut");
-    
-          if (croissant && croissant.parent !== trayObject) {
-            trayObject.add(croissant);
-            croissant.position.set(0, 20, -10);
-            croissant.rotation.set(0, Math.PI / 3, 0);
-            croissant.scale.set(1.0, 1.0, 1.0);
-            console.log("Re-parented croissant to tray");
-          }
           if (donut && donut.parent !== trayObject) {
             trayObject.add(donut);
             donut.position.set(0, 5, 30);
@@ -253,6 +282,11 @@ export function floating(object, gltf) {
   action.play();
 }
 
+// Add a function to set the croissant baker reference
+export function setCroissantBaker(baker) {
+  croissantBaker = baker;
+  console.log("Croissant baker reference set in animations.js");
+}
 
 export function updateAnimations(delta, elapsedTime) {
   [miffyWaveMixer, miffyPickupMixer, miffyHoldingMixer, miffyPutdownMixer, ovenOpenMixer, doorOpenMixer, capySleepMixer, bubbleMixer, ...mixers]
@@ -263,7 +297,7 @@ export function updateAnimations(delta, elapsedTime) {
   const miffy = scene.getObjectByName("cashier-miffy");
   const door = scene.getObjectByName("base");
 
-  if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== null) {
+  if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== Infinity) {
     const { sequenceStartOffset, duration, startPosition, targetPosition } = capybara.userData;
     const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
 

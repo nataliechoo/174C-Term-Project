@@ -19,6 +19,12 @@ export class CroissantBaker {
         this.originalCroissantPosition = null;
         this.ovenPosition = null;
         
+        // User data for additional state tracking
+        this.userData = {
+            isAnimationSequence: false,
+            bakingStarted: false
+        };
+        
         // Timer references for cleanup
         this.bakingTimers = [];
     }
@@ -71,18 +77,24 @@ export class CroissantBaker {
         
         // Move croissant to oven position
         const ovenInteriorPosition = this.ovenPosition.clone().add(
-            new THREE.Vector3(0, 20, 20) // Offset inside oven
+            new THREE.Vector3(0, 20, 0) // Offset inside oven
         );
         this.croissantObject.position.copy(ovenInteriorPosition);
+        
+        // Ensure croissant is visible in the oven
+        this.croissantObject.visible = true;
         
         // Start heating and mark as in enclosure (oven)
         this.thermoSystem.startHeating(this.croissantObject);
         this.thermoSystem.setObjectInEnclosure(this.croissantObject, true);
         
+        // Explicitly enable steam for visual effect
+        this.thermoSystem.enableSteam(true);
+        
         this.isInOven = true;
         this.isBaking = true;
         
-        console.log("Croissant placed in oven, baking started");
+        console.log("Croissant placed in oven at position:", ovenInteriorPosition);
     }
     
     /**
@@ -91,8 +103,25 @@ export class CroissantBaker {
     takeOutOfOven() {
         if (!this.initialized || !this.isInOven) return;
         
-        // Move croissant back to original position
-        this.croissantObject.position.copy(this.originalCroissantPosition);
+        // Get reference to the tray
+        const tray = this.scene.getObjectByName("tray");
+        
+        if (tray) {
+            console.log("Found tray, attaching croissant immediately");
+            
+            // Attach croissant to tray with correct positioning
+            tray.attach(this.croissantObject);
+            this.croissantObject.position.set(0, 20, -10);
+            this.croissantObject.rotation.set(0, Math.PI / 3, 0);
+            this.croissantObject.scale.set(1.0, 1.0, 1.0);
+            
+            // Ensure croissant is visible
+            this.croissantObject.visible = true;
+        } else {
+            // Fallback to original position if tray not found
+            console.warn("Tray not found, returning croissant to original position");
+            this.croissantObject.position.copy(this.originalCroissantPosition);
+        }
         
         // Start cooling and mark as out of enclosure (oven)
         this.thermoSystem.startCooling(this.croissantObject);
@@ -101,7 +130,7 @@ export class CroissantBaker {
         this.isInOven = false;
         this.isBaking = false;
         
-        console.log("Croissant removed from oven, cooling started");
+        console.log("Croissant removed from oven, cooling started on tray");
     }
     
     /**
@@ -127,14 +156,34 @@ export class CroissantBaker {
         this.isInOven = false;
         this.isBaking = false;
         
-        // Move croissant back to original position
-        this.croissantObject.position.copy(this.originalCroissantPosition);
+        // Get reference to the tray
+        const tray = this.scene.getObjectByName("tray");
+        
+        if (tray) {
+            // If the croissant is not already a child of the tray, attach it
+            if (this.croissantObject.parent !== tray) {
+                tray.attach(this.croissantObject);
+                this.croissantObject.position.set(0, 20, -10);
+                this.croissantObject.rotation.set(0, Math.PI / 3, 0);
+                this.croissantObject.scale.set(1.0, 1.0, 1.0);
+            }
+        } else {
+            // No tray found, just move back to original position
+            this.croissantObject.position.copy(this.originalCroissantPosition);
+        }
+        
+        // Always ensure croissant is visible
+        this.croissantObject.visible = true;
         
         // Reset thermoelastic state
         this.thermoSystem.resetObject(this.croissantObject);
         this.thermoSystem.enableSteam(false);
         
-        console.log("Croissant baker reset");
+        // Reset animation state
+        this.userData.isAnimationSequence = false;
+        this.userData.bakingStarted = false;
+        
+        console.log("Croissant baker reset - croissant returned to initial state");
     }
     
     /**

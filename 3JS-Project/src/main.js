@@ -3,7 +3,7 @@ import "./styles.css";
 
 // Import core modules
 import { loadGLTFModels, signPhysics, createControls, starObject, capysleepinPosition } from "./core/models.js";
-import { updateAnimations } from "./core/animations.js";
+import { updateAnimations, setCroissantBaker } from "./core/animations.js";
 import { initSplinePaths, updateCameraPath, updateStarPath, initStarLight, cameraControlPoints } from "./core/paths.js";
 import { 
   initCamera, 
@@ -255,8 +255,7 @@ function init() {
   const controls = createControls(
     initCameraToggle, // Pass camera toggle initializer
     CAMERA_MODE,      // Pass camera mode constants
-    cameraMode,       // Pass current camera mode
-    null              // We'll set the croissant baker later
+    cameraMode       // Pass current camera mode
   );
   
   // Setup keyboard shortcuts for camera movement
@@ -264,6 +263,12 @@ function init() {
   
   // Load all models
   loadGLTFModels();
+  
+  // Store reference to controls for updating later
+  window.controlsReference = controls;
+  
+  // Track loading progress
+  let loadingStartTime = performance.now();
   
   // Setup polling to check when models are loaded
   const checkForModels = () => {
@@ -283,20 +288,13 @@ function init() {
       });
       console.log("CroissantBaker initialized with oven and croissant objects");
       
-      // Update controls with the croissant baker
-      const controlsContainer = document.querySelector('div[style*="position: absolute"]');
-      if (controlsContainer) {
-        // Remove the old controls container
-        controlsContainer.remove();
-        
-        // Create new controls with the croissant baker
-        createControls(
-          initCameraToggle,
-          CAMERA_MODE,
-          cameraMode,
-          croissantBaker
-        );
-      }
+      // Pass the croissant baker to animations.js
+      setCroissantBaker(croissantBaker);
+      
+      // Enable the camera button now that everything is loaded
+      enableCameraButton();
+      
+      console.log(`Scene fully loaded in ${((performance.now() - loadingStartTime) / 1000).toFixed(2)} seconds`);
     } else {
       console.log("Waiting for models to load...");
       // Try again in 200ms
@@ -310,7 +308,6 @@ function init() {
   initStarLight();
   createGround();
 
-
   envMap = setupEnvironment(scene, renderer);
   // Initialize B-spline paths
   initSplinePaths();
@@ -320,6 +317,20 @@ function init() {
   setTimeout(() => {
     animate();
   }, 1000 / FPS_LIMIT);
+}
+
+/**
+ * Enable the camera button once everything is loaded
+ */
+function enableCameraButton() {
+  if (window.controlsReference && window.controlsReference.cameraButton) {
+    const cameraButton = window.controlsReference.cameraButton;
+    cameraButton.disabled = false;
+    cameraButton.style.opacity = "1";
+    cameraButton.style.cursor = "pointer";
+    cameraButton.title = "Click to change camera mode";
+    console.log("Camera button enabled");
+  }
 }
 
 /**

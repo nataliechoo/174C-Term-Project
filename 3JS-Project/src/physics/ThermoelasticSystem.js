@@ -256,8 +256,7 @@ export class ThermoelasticSystem {
      * @param {number} deltaTime - Time delta in seconds
      */
     updateSteamParticles(item, deltaTime) {
-        // Don't show steam if steam is disabled, particles not initialized, or object is in enclosure
-        if (!this.steamEnabled || !this.steamParticles || !this.particleSystem || item.isInEnclosure) {
+        if (!this.steamEnabled || !this.steamParticles || !this.particleSystem) {
             this._hideParticleSystem();
             return;
         }
@@ -265,11 +264,25 @@ export class ThermoelasticSystem {
         const tempRatio = this._calculateTempRatio(item);
         const settings = item.settings;
         
-        // Only show steam if temperature is above threshold
-        if (tempRatio > settings.steamThreshold) {
-            this._showParticleSystem(item, settings);
+        // Always update particle position to follow the object (croissant)
+        if (item.object) {
+            // Get current world position of the object
+            const objectWorldPos = new THREE.Vector3();
+            item.object.getWorldPosition(objectWorldPos);
+            
+            // Always position particles at the object's position
+            this.particleSystem.position.copy(objectWorldPos);
+            
+            // Add height offset
+            this.particleSystem.position.y += settings.steamStartHeight;
+        }
+        
+        // Show steam during heating and during cooling period, as long as temperature is high enough
+        if (tempRatio > settings.steamThreshold || item.isInEnclosure || (item.isCooling && item.isBaked)) {
             this._updateParticlePositions(tempRatio, deltaTime, settings);
-            this._updateParticleOpacity(tempRatio);
+            this._updateParticleOpacity(Math.max(tempRatio, item.isInEnclosure ? 0.4 : 0));
+            this.particleSystem.visible = true;
+            this.steamParticles.active = true;
         } else {
             this._hideParticleSystem();
         }
@@ -301,21 +314,6 @@ export class ThermoelasticSystem {
         if (this.steamParticles) {
             this.steamParticles.active = false;
         }
-    }
-
-    /**
-     * Show the particle system and position it at the object
-     * @private
-     * @param {Object} item - Object item from the objects array
-     * @param {Object} settings - Object settings
-     */
-    _showParticleSystem(item, settings) {
-        this.particleSystem.visible = true;
-        this.steamParticles.active = true;
-        
-        // Position particle system at object
-        this.particleSystem.position.copy(item.object.position);
-        this.particleSystem.position.y += settings.steamStartHeight;
     }
 
     /**
@@ -466,17 +464,23 @@ export class ThermoelasticSystem {
             item.meshes.forEach(meshData => {
                 if (!meshData.mesh.material || !meshData.mesh.material.color) return;
                 
-                if (item.isBaked && !item.isInEnclosure) {
-                    // Only show baked color when baked AND removed from oven (during cooling)
-                    // Lerp from hot to baked color during cooling
-                    const coolingProgress = 1 - tempRatio;
-                    meshData.mesh.material.color.lerpColors(
-                        item.settings.colorWhenHot,
-                        item.settings.colorWhenDone,
-                        coolingProgress
-                    );
+                if (item.isBaked) {
+                    if (!item.isInEnclosure && item.isCooling) {
+                        // During cooling phase after being baked, lerp from hot to baked color
+                        const coolingProgress = 1 - tempRatio;
+                        meshData.mesh.material.color.lerpColors(
+                            item.settings.colorWhenHot,
+                            item.settings.colorWhenDone,
+                            coolingProgress
+                        );
+                    } else if (!item.isInEnclosure && !item.isCooling) {
+                        // When baked and cooling is complete, maintain the baked color
+                        meshData.mesh.material.color.copy(item.settings.colorWhenDone);
+                    } else if (item.isInEnclosure) {
+                        // While in oven after reaching baking threshold, maintain hot color
+                        meshData.mesh.material.color.copy(item.settings.colorWhenHot);
+                    }
                 } else if (item.isHeating || item.isInEnclosure) {
-                    // While in oven or heating, lerp from cold to hot color
                     meshData.mesh.material.color.lerpColors(
                         item.settings.colorWhenCold,
                         item.settings.colorWhenHot,
