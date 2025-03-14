@@ -195,9 +195,9 @@ export const models = [
   {
     name: "sign",
     path: "/assets/sign/textured-sign-transformed.glb",
-    position: new THREE.Vector3(-400, 550, -880),
+    position: new THREE.Vector3(-450, 550, 640),
     rotation: new THREE.Euler(0, Math.PI / 2, 0),
-    scale: new THREE.Vector3(5, 5, 5),
+    scale: new THREE.Vector3(3, 3, 3),
   },
   {
     name: "cloud",
@@ -478,7 +478,7 @@ export function loadGLTFModels() {
               node.material = new THREE.MeshStandardMaterial({
                 color: new THREE.Color(0xffffff), // white cloud color
                 emissive: new THREE.Color(0xffffff), // emissive color white
-                emissiveIntensity: 0.1, // adjust as needed
+                emissiveIntensity: 0.15, // adjust as needed
               });
               node.material.needsUpdate = true;
             }

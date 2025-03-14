@@ -50,7 +50,7 @@ export function applyMoonMesh(mesh, index) {
   // Temporarily disable transmission and clearcoat for testing
   mesh.material.transmission = 0.0; // no transmission
   mesh.material.clearcoat = 0.0; 
-  mesh.material.emissiveIntensity = 0.3; // ensure no emission
+  mesh.material.emissiveIntensity = 1.7; 
 
   // set material properties
   mesh.material.metalness = 1.0; 
