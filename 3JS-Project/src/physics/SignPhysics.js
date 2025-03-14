@@ -13,6 +13,7 @@ const DEFAULT_WIND_FREQUENCY = 0.2;
 
 // Default rotation limit parameters
 const DEFAULT_MAX_ROTATION_ANGLE = Math.PI / 6; // 30 degrees
+const DEFAULT_BACKWARD_RESTRICTION = true; // Prevent backwards rotation
 
 export class SignPhysics {
   constructor(scene) {
@@ -37,6 +38,7 @@ export class SignPhysics {
 
     // Rotation limit
     this.maxRotationAngle = DEFAULT_MAX_ROTATION_ANGLE;
+    this.preventBackwardRotation = DEFAULT_BACKWARD_RESTRICTION; // Flag to prevent backwards rotation
 
     // Set gravity
     this.physics.setGravity(new THREE.Vector3(0, -9.8, 0));
@@ -190,16 +192,26 @@ export class SignPhysics {
       angle = -angle;
     }
 
-    // Only apply limiting force when approaching the limit
-    if (Math.abs(angle) > this.maxRotationAngle * 0.7) {
-      // How close we are to the limit (0-1+)
+    // Check if the sign is moving backwards (positive angle in this system)
+    const isMovingBackward = angle > 0;
+
+    if (isMovingBackward && this.preventBackwardRotation) {
+      const forceMagnitude = 500;
+      const forceDir = new THREE.Vector3(0, 0, -1);
+      this.bottomParticle.addForce(forceDir.multiplyScalar(forceMagnitude));
+      
+      const velocityZ = this.bottomParticle.velocity.z;
+      if (velocityZ > 0) {
+        const dampingForce = new THREE.Vector3(0, 0, -velocityZ * 10);
+        this.bottomParticle.addForce(dampingForce);
+      }
+    } 
+    else if (angle < -this.maxRotationAngle * 0.7) {
       const limitRatio = Math.abs(angle) / this.maxRotationAngle;
 
-      // Force increases exponentially as we approach and exceed the limit
       const forceMagnitude = 100 * Math.pow(limitRatio, 4);
 
-      // Direction is opposite to current rotation
-      const forceDir = new THREE.Vector3(0, 0, -Math.sign(angle));
+      const forceDir = new THREE.Vector3(0, 0, 1);
 
       // Apply the limiting force
       this.bottomParticle.addForce(forceDir.multiplyScalar(forceMagnitude));
@@ -245,7 +257,22 @@ export class SignPhysics {
     const direction = new THREE.Vector3()
       .subVectors(bottomPos, topPos)
       .normalize();
-    const angleX = Math.atan2(direction.z, -direction.y);
+    let angleX = Math.atan2(direction.z, -direction.y);
+
+    if (this.preventBackwardRotation && angleX > 0) {
+      angleX = 0;
+      
+      if (bottomPos.z > topPos.z) {
+        this.bottomParticle.position.z = topPos.z;
+        this.bottomParticle.position.y = topPos.y - length;
+        
+        this.bottomParticle.velocity.z = Math.min(0, this.bottomParticle.velocity.z);
+      }
+    }
+    
+    if (angleX < -this.maxRotationAngle) {
+      angleX = -this.maxRotationAngle;
+    }
 
     // Rotation matrix for pivot offset calculation
     const rotationMatrix = new THREE.Matrix4().makeRotationX(angleX);
