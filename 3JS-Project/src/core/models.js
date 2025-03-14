@@ -166,7 +166,7 @@ export const models = [
   },
   {
     name: "bubble",
-    path: "/assets/thought-bubble/thought-bubble-ani-transformed.glb",
+    path: "/assets/thought-bubble/bubble-edited-more-transformed.glb",
     position: capysleepinPosition.clone().add(new THREE.Vector3(-150, 30, 0)),
     rotation: new THREE.Euler(0, -Math.PI/2, 0),
     scale: new THREE.Vector3(1, 1, 1),
