@@ -190,7 +190,14 @@ function handlePathMode(elapsedTime) {
       createBlackout();
       secondBlackoutStartTime = elapsedTime; // Record start time of second blackout
       [keyLight, fillLight, backLight].forEach(light => light.visible = true); // Turn on main lights
-      scene.environment = envMap
+      scene.environment = envMap;
+      // ✅ REMOVE STAR, MOON, CLOUD HERE (clearly once):
+      ["star", "moon", "cloud"].forEach(name => {
+        const obj = scene.getObjectByName(name);
+        if (obj) {
+            scene.remove(obj);
+        }
+      });
     }
     return;
   }

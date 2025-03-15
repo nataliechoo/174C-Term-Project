@@ -23,11 +23,14 @@ export const cameraControlPoints = [
   [950, 600, -2550],
   [800, 500, -750],
   [650, 500, 1000],
-  [250, 500, 1350],
-  [-150, 500, 1350], // this is where we pause to look at the sign?
-  [-500, 500, 800],
-  [-500, 500, 500],
-  [-500, 500, 500]
+  [250, 500, 1850],
+  [-150, 500, 1850], // this is where we pause to look at the sign?
+  [-500, 500, 1300],
+  [-500, 550, 500],
+  [-500, 600, 200],
+  [-200, 650, 0],
+  [200, 700, 500],
+  [200, 700, 500],
 ];
 
 // Star animation path control points
@@ -110,18 +113,57 @@ export function initSplinePaths() {
  * @param {number} elapsedTime - Elapsed time
  */
 export function updateCameraPath(camera, elapsedTime) {
-  const duration = 10; // Duration for full traversal along spline
+  const duration = 7; // Duration for full traversal along spline
+  const finalSplinePoint = cameraControlPoints[cameraControlPoints.length - 2]; // Last REAL control point
 
-  let t = (elapsedTime % duration) / duration;
+  let t = elapsedTime / duration;
 
-  const pos = bspline_interpolate(t, splineDegree, cameraControlPoints);
-  camera.position.set(pos[0], pos[1], pos[2]);
+  if (t >= 1) {
+      // Camera has reached end of spline
+      camera.position.set(finalSplinePoint[0], finalSplinePoint[1], finalSplinePoint[2]);
 
-  const lookAheadOffset = 0.1; // Adjust this offset as needed
-  let nextT = ((elapsedTime + lookAheadOffset) % duration) / duration;
-  const nextPos = bspline_interpolate(nextT, splineDegree, cameraControlPoints);
+      // Check if lerp has already been completed
+      if (!camera.userData.lerpCompleted) {
+          const capybara = scene.getObjectByName("capybara");
+          if (capybara) {
+              const capybaraWorldPosition = new THREE.Vector3();
+              capybara.getWorldPosition(capybaraWorldPosition);
 
-  camera.lookAt(new THREE.Vector3(nextPos[0], nextPos[1], nextPos[2]));
+              // Store initial look-at position for lerping
+              if (!camera.userData.initialLookAt) {
+                  camera.userData.initialLookAt = new THREE.Vector3().copy(camera.getWorldDirection(new THREE.Vector3()));
+                  camera.userData.lerpStartTime = elapsedTime;
+              }
+
+              const lerpDuration = 2; // Duration of lerp in seconds
+              const progress = Math.min((elapsedTime - camera.userData.lerpStartTime) / lerpDuration, 1);
+
+              const interpolatedLookAt = new THREE.Vector3().lerpVectors(
+                  camera.userData.initialLookAt,
+                  capybaraWorldPosition,
+                  progress
+              );
+
+              camera.lookAt(interpolatedLookAt);
+
+              // Mark lerp as completed once progress reaches 1
+              if (progress === 1) {
+                  camera.userData.lerpCompleted = true;
+                  console.log("Lerp completed: Camera now looking at capybara.");
+              }
+          }
+      }
+  } else {
+      // Normal spline movement
+      const pos = bspline_interpolate(t, splineDegree, cameraControlPoints);
+      camera.position.set(pos[0], pos[1], pos[2]);
+
+      // Regular look-ahead along spline
+      const lookAheadOffset = 0.1;
+      let nextT = Math.min(t + lookAheadOffset, 1.0);
+      const nextPos = bspline_interpolate(nextT, splineDegree, cameraControlPoints);
+      camera.lookAt(new THREE.Vector3(nextPos[0], nextPos[1], nextPos[2]));
+  }
 }
 
 /**
