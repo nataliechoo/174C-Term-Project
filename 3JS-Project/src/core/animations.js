@@ -254,13 +254,32 @@ export function ovenOpen(object, gltf) {
   scene.add(object);
   ovenOpenMixer = new THREE.AnimationMixer(object);
   const clips = gltf.animations;
-  const open = THREE.AnimationClip.findByName(clips, 'open');
+  const openClip = THREE.AnimationClip.findByName(clips, 'open');
 
-  const action = ovenOpenMixer.clipAction(open);
-  console.log("ANIMATING OVEN OPENING CLIP");
-  console.log(open);
-  action.play();
+  if (openClip) {
+    const action = ovenOpenMixer.clipAction(openClip);
+    action.setLoop(THREE.LoopOnce);
+    action.clampWhenFinished = true;
+    action.play(); // Open the oven immediately
+
+    object.userData.ovenAction = action;
+    object.userData.ovenOpened = true;
+    object.userData.ovenClosedAfterBaking = false;
+
+    // Ensure the oven stays open and only closes when the croissant is inside
+    setTimeout(() => {
+      const croissant = scene.getObjectByName("croissant");
+      if (croissant && croissant.parent === object) {
+        action.timeScale = -1; // Play backward (close)
+        action.reset().play();
+        object.userData.ovenClosedAfterBaking = true;
+      } else {
+      }
+    }, 3000); // Adjust the timing if needed
+  } else {
+  }
 }
+
 
 /**
  * Setup door open animation
@@ -334,6 +353,32 @@ export function updateAnimations(delta, elapsedTime) {
   // Capybara movement logic
   const capybara = scene.getObjectByName("capybara");
   const miffy = scene.getObjectByName("cashier-miffy");
+  const croissant = scene.getObjectByName("croissant");
+  const oven = scene.getObjectByName("oven");
+  const tray = scene.getObjectByName("tray");
+  
+  if (oven?.userData?.ovenAction && tray) {
+      const ovenAction = oven.userData.ovenAction;
+
+  
+      if (!oven.userData.ovenOpenedForBaking) {
+          ovenAction.timeScale = 1;
+          ovenAction.reset().play(); 
+          oven.userData.ovenOpenedForBaking = true;
+          oven.userData.ovenClosedAfterBaking = false; 
+      }
+  
+      const trayFinalPosition = new THREE.Vector3(-380, 260, -500); 
+  
+      if (!oven.userData.ovenClosedAfterBaking && tray.position.equals(trayFinalPosition)) {
+          setTimeout(() => {
+              ovenAction.timeScale = -1; 
+              ovenAction.reset().play();
+              oven.userData.ovenClosedAfterBaking = true;
+          }, 800); 
+      }
+    }  
+
 
   if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== null) {
       const { sequenceStartOffset, duration, startPosition, targetPosition } = capybara.userData;
