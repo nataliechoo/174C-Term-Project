@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { scene, animationTiming } from "../main.js";
 import { trayObject } from "./models.js";
+import { cameraMode } from "./camera.js";
 
 // Add reference to fetch croissant baker from main
 let croissantBaker = null;
@@ -289,140 +290,96 @@ export function setCroissantBaker(baker) {
 }
 
 export function updateAnimations(delta, elapsedTime) {
-  [miffyWaveMixer, miffyPickupMixer, miffyHoldingMixer, miffyPutdownMixer, ovenOpenMixer, doorOpenMixer, capySleepMixer, bubbleMixer, ...mixers]
+  if (delta === 0) {
+      delta = 1 / 60; // Assume ~60 FPS if time is stuck
+  }
+
+  if (animationTiming.BEGIN_ANIMATION_SEQUENCE === Infinity) {
+      return;
+  }
+
+  [miffyWaveMixer, miffyPickupMixer, miffyHoldingMixer, miffyPutdownMixer, 
+   ovenOpenMixer, doorOpenMixer, capySleepMixer, bubbleMixer, ...mixers]
     .forEach(mixer => mixer?.update(delta));
 
   // Capybara movement logic
   const capybara = scene.getObjectByName("capybara");
   const miffy = scene.getObjectByName("cashier-miffy");
-  const door = scene.getObjectByName("base");
 
-  if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== Infinity) {
-    const { sequenceStartOffset, duration, startPosition, targetPosition } = capybara.userData;
-    const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
+  if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== null) {
+      const { sequenceStartOffset, duration, startPosition, targetPosition } = capybara.userData;
+      const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
 
-    // Hard-coded door open time (2 seconds before capybara starts moving)
-    const doorOpenTime = 20; // Door opens at 20 seconds
-    if (sequenceTime >= doorOpenTime && sequenceTime < sequenceStartOffset && door?.userData?.doorAction) {
-      const doorAction = door.userData.doorAction;
-      const doorMixer = door.userData.doorMixer;
+      if (sequenceTime >= sequenceStartOffset) {
+          const progress = Math.min((sequenceTime - sequenceStartOffset) / duration, 1);
+          const newX = THREE.MathUtils.lerp(startPosition.x, targetPosition.x, progress);
+          const newZ = THREE.MathUtils.lerp(startPosition.z, targetPosition.z, progress);
+          const newY = progress < 1 ? THREE.MathUtils.lerp(startPosition.y, targetPosition.y, progress) + Math.sin(elapsedTime * 10) * 5 : targetPosition.y;
 
-      if (!doorAction.isRunning() && !door.userData.doorClosed) {
-        doorAction.paused = false;
-        doorAction.timeScale = 1; 
-        doorAction.play();
-        door.userData.doorClosing = false;
-        console.log("Door opening animation started at 20 seconds");
+          capybara.position.set(newX, newY, newZ);
+
+          if (miffy?.userData?.waveAction) {
+              if (progress > 0 && progress < 1 && !miffy.userData.waveStarted) {
+                  miffy.userData.waveAction.play();
+                  miffy.userData.waveStarted = true;
+              } else if (progress === 1 && miffy.userData.waveStarted) {
+                  miffy.userData.waveAction.stop();
+                  miffy.userData.waveStarted = false;
+              }
+          }
       }
-    }
-
-    // Capybara starts moving at 22 seconds
-    if (sequenceTime >= sequenceStartOffset) {
-      const progress = Math.min((sequenceTime - sequenceStartOffset) / duration, 1);
-      const newX = THREE.MathUtils.lerp(startPosition.x, targetPosition.x, progress);
-      const newZ = THREE.MathUtils.lerp(startPosition.z, targetPosition.z, progress);
-      const newY = progress < 1 ? THREE.MathUtils.lerp(startPosition.y, targetPosition.y, progress) + Math.sin(elapsedTime * 10) * 5 : targetPosition.y;
-
-      capybara.position.set(newX, newY, newZ);
-
-      if (door?.userData?.doorAction && progress < 1 && !door.userData.doorClosing) {
-        const doorAction = door.userData.doorAction;
-        const doorMixer = door.userData.doorMixer;
-        doorAction.time = doorAction.getClip().duration; 
-        doorMixer.update(0); 
-      }
-
-      if (door?.userData?.doorAction && progress === 1 && !door.userData.doorClosing) {
-        const doorAction = door.userData.doorAction;
-        const doorMixer = door.userData.doorMixer;
-
-        if (!door.userData.doorClosing) {
-          doorAction.timeScale = -1; 
-          doorAction.paused = false;
-          doorAction.time = doorAction.getClip().duration;
-          doorAction.play();
-          door.userData.doorClosing = true;
-          console.log("Door closing animation started");
-        }
-      }
-
-      if (door?.userData?.doorAction?.isRunning() && door.userData.doorClosing) {
-        const doorAction = door.userData.doorAction;
-        const doorMixer = door.userData.doorMixer;
-        doorAction.time = Math.max(doorAction.time - delta, 0); 
-        if (doorAction.time <= 0) {
-          doorAction.stop();
-          door.userData.doorClosing = false;
-          door.userData.doorClosed = true;
-          console.log("Door fully closed");
-        }
-      }
-
-      if (miffy?.userData?.waveAction) {
-        if (progress > 0 && progress < 1 && !miffy.userData.waveStarted) {
-          miffy.userData.waveAction.play();
-          miffy.userData.waveStarted = true;
-          console.log("Miffy started waving");
-        } else if (progress === 1 && miffy.userData.waveStarted) {
-          miffy.userData.waveAction.stop();
-          miffy.userData.waveStarted = false;
-          console.log("Miffy stopped waving");
-        }
-      }
-    }
   }
 
+  // Barista rotation logic
   const barista = scene.getObjectByName("barista-miffy");
   if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== null) {
-    const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
+      const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
 
-    if (sequenceTime >= capybara.userData.sequenceStartOffset + capybara.userData.duration && barista && !barista.userData.rotationDone) {
-      barista.userData.rotationDone = true;
-      barista.userData.initialYRotation = barista.rotation.y;
-      barista.userData.targetYRotation = barista.rotation.y + Math.PI;
-      barista.userData.rotationStartTime = elapsedTime;
-      barista.userData.rotationDuration = 2;
-    }
+      if (sequenceTime >= capybara.userData.sequenceStartOffset + capybara.userData.duration && barista && !barista.userData.rotationDone) {
+          barista.userData.rotationDone = true;
+          barista.userData.initialYRotation = barista.rotation.y;
+          barista.userData.targetYRotation = barista.rotation.y + Math.PI;
+          barista.userData.rotationStartTime = elapsedTime;
+          barista.userData.rotationDuration = 2;
+      }
 
-    if (barista?.userData.rotationStartTime) {
-      const rotationProgress = Math.min((elapsedTime - barista.userData.rotationStartTime) / barista.userData.rotationDuration, 1);
-      barista.rotation.y = THREE.MathUtils.lerp(barista.userData.initialYRotation, barista.userData.targetYRotation, rotationProgress);
+      if (barista?.userData.rotationStartTime && !barista.userData.rotationPaused) {
+          const rotationProgress = Math.min((elapsedTime - barista.userData.rotationStartTime) / barista.userData.rotationDuration, 1);
+          barista.rotation.y = THREE.MathUtils.lerp(barista.userData.initialYRotation, barista.userData.targetYRotation, rotationProgress);
 
-      if (rotationProgress === 1 && !barista.userData.rotationPaused) {
-        barista.userData.rotationPaused = true;
-        setTimeout(() => {
-          if (!barista.userData.pickupDone && barista.userData.pickupAction) {
-            barista.userData.pickupAction.play();
-            barista.userData.pickupDone = true;
-
-            barista.userData.pickupAction.getMixer().addEventListener("finished", () => {
-              barista.userData.secondRotationDone = true;
-              barista.userData.secondInitialYRotation = barista.rotation.y;
-              barista.userData.secondTargetYRotation = barista.userData.initialYRotation;
-              barista.userData.secondRotationStartTime = elapsedTime;
-              barista.userData.secondRotationDuration = 2;
+          if (rotationProgress === 1) {
+              barista.userData.rotationPaused = true;
 
               setTimeout(() => {
-                if (barista.userData.putdownAction) barista.userData.putdownAction.play();
-              }, barista.userData.secondRotationDuration * 1000);
-            });
+                  if (!barista.userData.pickupDone && barista.userData.pickupAction) {
+                      barista.userData.pickupAction.reset().play();
+                      barista.userData.pickupDone = true;
+
+                      barista.userData.pickupAction.getMixer().addEventListener("finished", () => {
+                          barista.userData.secondRotationDone = true;
+                          barista.userData.secondInitialYRotation = barista.rotation.y;
+                          barista.userData.secondTargetYRotation = barista.userData.initialYRotation;
+                          barista.userData.secondRotationStartTime = elapsedTime;
+                          barista.userData.secondRotationDuration = 2;
+                      });
+                  }
+              }, 2000);
           }
-          barista.userData.rotationPaused = false;
-        }, 2000);
       }
 
       if (barista?.userData.secondRotationStartTime) {
-        const secondRotationProgress = Math.min((elapsedTime - barista.userData.secondRotationStartTime) / barista.userData.secondRotationDuration, 1);
-        barista.rotation.y = THREE.MathUtils.lerp(barista.userData.secondInitialYRotation, barista.userData.secondTargetYRotation, secondRotationProgress);
+          const secondRotationProgress = Math.min((elapsedTime - barista.userData.secondRotationStartTime) / barista.userData.secondRotationDuration, 1);
+          barista.rotation.y = THREE.MathUtils.lerp(barista.userData.secondInitialYRotation, barista.userData.secondTargetYRotation, secondRotationProgress);
 
-        if (secondRotationProgress === 1) {
-          barista.userData.rotationDone = false;
-          barista.userData.secondRotationDone = false;
-        }
+          if (secondRotationProgress === 1) {
+              barista.userData.rotationDone = false;
+              barista.userData.secondRotationDone = false;
+              barista.userData.rotationPaused = false;
+          }
       }
-    }
   }
 }
+
 /**
  * Configure Capybara movement
  */
