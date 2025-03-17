@@ -98,11 +98,19 @@ export function miffyBarista(object, gltf) {
     mixer.addEventListener('loop', (e) => {
       if (e.action === pickupAction && trayObject) {
         // Attach tray when pickup animation starts
-        const handBone = object.getObjectByName("BoneR"); 
+        const handBone = object.getObjectByName("BoneR");
         if (handBone) {
           handBone.add(trayObject);
-          trayObject.position.set(0, 10, 0); 
+          trayObject.position.set(0, 10, 0);
           console.log("Tray attached to Miffy's hand!");
+          
+          // Ensure the croissant is always attached to the tray
+          const croissant = scene.getObjectByName("croissant");
+          if (croissant) {
+            trayObject.add(croissant);
+            croissant.position.set(0, 5, 0); // Adjust relative to tray
+            console.log("Croissant attached to tray!");
+          }
         }
       }
     });
@@ -110,18 +118,39 @@ export function miffyBarista(object, gltf) {
     mixer.addEventListener('finished', (e) => {
       if (e.action === putdownAction && trayObject) {
         if (trayObject.parent) {
-          // Find the croissant and remove it from the tray before placing tray
+          const croissant = scene.getObjectByName("croissant");
+          if (croissant) {
+            trayObject.add(croissant);
+            croissant.position.set(0, 5, 0);
+          }
+    
+          scene.attach(trayObject);
+          trayObject.position.set(-380, 260, -500);
+          trayObject.rotation.set(0, Math.PI * 16, 0);
+          trayObject.scale.set(1.5, 1.5, 1.5);
+          console.log("Tray placed at final position!");
+    
+          if (croissant) {
+            trayObject.add(croissant);
+            croissant.position.set(0, 5, 0);
+            console.log("Croissant re-attached to tray!");
+          }
+        }
+      }
+    });
+    
+    
+    mixer.addEventListener('finished', (e) => {
+      if (e.action === putdownAction && trayObject) {
+        if (trayObject.parent) {
           const croissant = scene.getObjectByName("croissant");
           if (croissant && croissant.parent === trayObject) {
-            // Detach croissant from tray before placing tray
             scene.attach(croissant);
             
-            // Save position for later re-attachment
             const worldPos = new THREE.Vector3();
             croissant.getWorldPosition(worldPos);
             croissant.userData.originalWorldPosition = worldPos.clone();
             
-            // Start baking process if baker is available
             if (croissantBaker && !croissantBaker.userData?.bakingStarted) {
               console.log("Starting croissant baking early in the animation sequence");
               croissantBaker.userData = croissantBaker.userData || {};
