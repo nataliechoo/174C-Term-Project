@@ -356,34 +356,31 @@ export function updateAnimations(delta, elapsedTime) {
   const croissant = scene.getObjectByName("croissant");
   const oven = scene.getObjectByName("oven");
   const tray = scene.getObjectByName("tray");
-  
+
   if (oven?.userData?.ovenAction && tray) {
       const ovenAction = oven.userData.ovenAction;
-
-  
       if (!oven.userData.ovenOpenedForBaking) {
           ovenAction.timeScale = 1;
-          ovenAction.reset().play(); 
+          ovenAction.reset().play();
           oven.userData.ovenOpenedForBaking = true;
-          oven.userData.ovenClosedAfterBaking = false; 
+          oven.userData.ovenClosedAfterBaking = false;
       }
-  
-      const trayFinalPosition = new THREE.Vector3(-380, 260, -500); 
-  
+
+      const trayFinalPosition = new THREE.Vector3(-380, 260, -500);
       if (!oven.userData.ovenClosedAfterBaking && tray.position.equals(trayFinalPosition)) {
           setTimeout(() => {
-              ovenAction.timeScale = -1; 
+              ovenAction.timeScale = -1;
               ovenAction.reset().play();
               oven.userData.ovenClosedAfterBaking = true;
-          }, 800); 
+          }, 800);
       }
-    }  
+  }
 
-    if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== null) {
+  if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== null) {
       const { sequenceStartOffset, duration, startPosition, targetPosition } = capybara.userData;
       const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
-  
-      // Only run first movement logic if NOT started second move
+
+      // First movement logic
       if (!capybara.userData.startedSecondMove) {
         if (sequenceTime >= sequenceStartOffset) {
           const progress = Math.min((sequenceTime - sequenceStartOffset) / duration, 1);
@@ -392,15 +389,21 @@ export function updateAnimations(delta, elapsedTime) {
           const newY = progress < 1 ? 
             THREE.MathUtils.lerp(startPosition.y, targetPosition.y, progress) + Math.sin(elapsedTime * 10) * 5 : 
             targetPosition.y;
-  
+
           capybara.position.set(newX, newY, newZ);
-  
+
+          // **Rotate Capybara to Face Movement**
+          if (progress > 0) {
+              const direction = new THREE.Vector3().subVectors(targetPosition, startPosition).normalize();
+              capybara.rotation.y = Math.atan2(direction.x, direction.z) - Math.PI / 2;
+          }
+
           if (progress === 1 && !capybara.userData.reachedCashRegister) {
             capybara.userData.reachedCashRegister = true;
             capybara.userData.pauseStartTime = elapsedTime;
             console.log("Capybara reached the cash register. Waiting to move to the stool...");
           }
-  
+
           // Wave logic for Miffy
           if (miffy?.userData?.waveAction) {
             if (progress > 0 && progress < 1 && !miffy.userData.waveStarted) {
@@ -413,7 +416,7 @@ export function updateAnimations(delta, elapsedTime) {
           }
         }
       }
-  
+
       // Second movement logic
       if (capybara.userData.reachedCashRegister && !capybara.userData.startedSecondMove && elapsedTime - capybara.userData.pauseStartTime > 5) {
         console.log("Capybara waited 5 seconds. Moving to the stool...");
@@ -421,15 +424,21 @@ export function updateAnimations(delta, elapsedTime) {
         capybara.userData.secondStartTime = elapsedTime;
         capybara.userData.startPosition = capybara.position.clone();
       }
-  
+
       if (capybara.userData.startedSecondMove && !capybara.userData.finishedMoving) {
         const secondMoveProgress = Math.min((elapsedTime - capybara.userData.secondStartTime) / capybara.userData.secondDuration, 1);
         const newX = THREE.MathUtils.lerp(capybara.userData.startPosition.x, capybara.userData.stoolPosition.x, secondMoveProgress);
         const newZ = THREE.MathUtils.lerp(capybara.userData.startPosition.z, capybara.userData.stoolPosition.z, secondMoveProgress);
         const newY = capybara.userData.stoolPosition.y + (secondMoveProgress < 1 ? Math.sin(elapsedTime * 10) * 5 : 0);
-  
+
         capybara.position.set(newX, newY, newZ);
-  
+
+        // **Rotate Capybara to Face Movement**
+        if (secondMoveProgress > 0) {
+            const direction = new THREE.Vector3().subVectors(capybara.userData.stoolPosition, capybara.userData.startPosition).normalize();
+            capybara.rotation.y = Math.atan2(direction.x, direction.z) - Math.PI / 2;
+        }
+
         if (secondMoveProgress === 1) {
           console.log("Capybara is now sitting on the chair.");
           capybara.userData.finishedMoving = true;
@@ -487,6 +496,7 @@ export function updateAnimations(delta, elapsedTime) {
       }
   }
 }
+
 
 /**
  * Configure Capybara movement
