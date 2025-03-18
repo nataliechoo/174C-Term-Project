@@ -379,30 +379,64 @@ export function updateAnimations(delta, elapsedTime) {
       }
     }  
 
-
-  if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== null) {
+    if (capybara?.userData?.targetPosition && animationTiming.BEGIN_ANIMATION_SEQUENCE !== null) {
       const { sequenceStartOffset, duration, startPosition, targetPosition } = capybara.userData;
       const sequenceTime = elapsedTime - animationTiming.BEGIN_ANIMATION_SEQUENCE;
-
-      if (sequenceTime >= sequenceStartOffset) {
+  
+      // Only run first movement logic if NOT started second move
+      if (!capybara.userData.startedSecondMove) {
+        if (sequenceTime >= sequenceStartOffset) {
           const progress = Math.min((sequenceTime - sequenceStartOffset) / duration, 1);
           const newX = THREE.MathUtils.lerp(startPosition.x, targetPosition.x, progress);
           const newZ = THREE.MathUtils.lerp(startPosition.z, targetPosition.z, progress);
-          const newY = progress < 1 ? THREE.MathUtils.lerp(startPosition.y, targetPosition.y, progress) + Math.sin(elapsedTime * 10) * 5 : targetPosition.y;
-
+          const newY = progress < 1 ? 
+            THREE.MathUtils.lerp(startPosition.y, targetPosition.y, progress) + Math.sin(elapsedTime * 10) * 5 : 
+            targetPosition.y;
+  
           capybara.position.set(newX, newY, newZ);
-
-          if (miffy?.userData?.waveAction) {
-              if (progress > 0 && progress < 1 && !miffy.userData.waveStarted) {
-                  miffy.userData.waveAction.play();
-                  miffy.userData.waveStarted = true;
-              } else if (progress === 1 && miffy.userData.waveStarted) {
-                  miffy.userData.waveAction.stop();
-                  miffy.userData.waveStarted = false;
-              }
+  
+          if (progress === 1 && !capybara.userData.reachedCashRegister) {
+            capybara.userData.reachedCashRegister = true;
+            capybara.userData.pauseStartTime = elapsedTime;
+            console.log("Capybara reached the cash register. Waiting to move to the stool...");
           }
+  
+          // Wave logic for Miffy
+          if (miffy?.userData?.waveAction) {
+            if (progress > 0 && progress < 1 && !miffy.userData.waveStarted) {
+              miffy.userData.waveAction.play();
+              miffy.userData.waveStarted = true;
+            } else if (progress === 1 && miffy.userData.waveStarted) {
+              miffy.userData.waveAction.stop();
+              miffy.userData.waveStarted = false;
+            }
+          }
+        }
       }
-  }
+  
+      // Second movement logic
+      if (capybara.userData.reachedCashRegister && !capybara.userData.startedSecondMove && elapsedTime - capybara.userData.pauseStartTime > 5) {
+        console.log("Capybara waited 5 seconds. Moving to the stool...");
+        capybara.userData.startedSecondMove = true;
+        capybara.userData.secondStartTime = elapsedTime;
+        capybara.userData.startPosition = capybara.position.clone();
+      }
+  
+      if (capybara.userData.startedSecondMove && !capybara.userData.finishedMoving) {
+        const secondMoveProgress = Math.min((elapsedTime - capybara.userData.secondStartTime) / capybara.userData.secondDuration, 1);
+        const newX = THREE.MathUtils.lerp(capybara.userData.startPosition.x, capybara.userData.stoolPosition.x, secondMoveProgress);
+        const newZ = THREE.MathUtils.lerp(capybara.userData.startPosition.z, capybara.userData.stoolPosition.z, secondMoveProgress);
+        const newY = capybara.userData.stoolPosition.y + (secondMoveProgress < 1 ? Math.sin(elapsedTime * 10) * 5 : 0);
+  
+        capybara.position.set(newX, newY, newZ);
+  
+        if (secondMoveProgress === 1) {
+          console.log("Capybara is now sitting on the chair.");
+          capybara.userData.finishedMoving = true;
+          capybara.position.copy(capybara.userData.stoolPosition);
+        }
+      }
+    }
 
   // Barista rotation logic
   const barista = scene.getObjectByName("barista-miffy");
@@ -462,7 +496,12 @@ export function configureCapybaraMovement(capybara, config) {
   capybara.userData.targetPosition = config.targetPosition;
   capybara.userData.sequenceStartOffset = config.sequenceStartOffset;
   capybara.userData.duration = config.duration;
+  
+  // FIX: Ensure stool position is set
+  capybara.userData.stoolPosition = config.stoolPosition;
+  capybara.userData.secondDuration = config.secondDuration;
 }
+
 
 /**
  * Configure Miffy wave

@@ -436,8 +436,12 @@ export function loadGLTFModels() {
 
           object.userData.startPosition = object.position.clone();
           object.userData.targetPosition = new THREE.Vector3(-220, 110, 50);
-          object.userData.sequenceStartOffset = 22; // Start moving after 12 seconds
-          object.userData.duration = 4;
+          object.userData.stoolPosition = new THREE.Vector3(120, 200, 50); // Move to stool
+          object.userData.sequenceStartOffset = 22; // Start after 12 seconds
+          object.userData.duration = 4; // First movement duration
+          object.userData.secondDuration = 5; // Second movement duration
+          object.userData.reachedCashRegister = false;
+          object.userData.startedSecondMove = false;
         }
 
         else if (model.name === "cashier-miffy") {
