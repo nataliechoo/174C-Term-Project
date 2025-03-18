@@ -277,6 +277,12 @@ export function createControls(initCameraMode, cameraModes, currentMode) {
   physicsButton.style.width = "100%";
   physicsButton.style.cursor = "pointer";
   physicsButton.style.marginBottom = "10px";
+  
+  // Initially disable the physics button until everything is loaded
+  physicsButton.disabled = true;
+  physicsButton.style.opacity = "0.5";
+  physicsButton.style.cursor = "not-allowed";
+  physicsButton.title = "Loading scene... Please wait";
 
   // Add section divider
   const divider = document.createElement("hr");
@@ -285,9 +291,25 @@ export function createControls(initCameraMode, cameraModes, currentMode) {
   divider.style.border = "0";
   divider.style.borderTop = "1px solid rgba(255, 255, 255, 0.3)";
 
+  // Spline visualization toggle button
+  const splineButton = document.createElement("button");
+  splineButton.textContent = "Hide Spline Visualizations";
+  splineButton.style.padding = "5px";
+  splineButton.style.width = "100%";
+  splineButton.style.cursor = "pointer";
+  splineButton.style.marginBottom = "10px";
+  
+  // Initially disable the spline button until everything is loaded
+  splineButton.disabled = true;
+  splineButton.style.opacity = "0.5";
+  splineButton.style.cursor = "not-allowed";
+  splineButton.title = "Loading scene... Please wait";
+
   container.appendChild(cameraButton);
   container.appendChild(divider.cloneNode());
   container.appendChild(physicsButton);
+  container.appendChild(divider.cloneNode());
+  container.appendChild(splineButton);
   
   document.body.appendChild(container);
 
@@ -313,7 +335,7 @@ export function createControls(initCameraMode, cameraModes, currentMode) {
     initCameraMode(cameraButton);
   }
 
-  return { container, cameraButton, physicsButton };
+  return { container, cameraButton, physicsButton, splineButton };
 }
 
 /**

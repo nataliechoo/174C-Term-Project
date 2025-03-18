@@ -4,7 +4,7 @@ import "./styles.css";
 // Import core modules
 import { loadGLTFModels, signPhysics, createControls, starObject, capysleepinPosition } from "./core/models.js";
 import { updateAnimations, setCroissantBaker } from "./core/animations.js";
-import { initSplinePaths, updateCameraPath, updateStarPath, initStarLight, cameraControlPoints } from "./core/paths.js";
+import { initSplinePaths, updateCameraPath, updateStarPath, initStarLight, cameraControlPoints, toggleSplineVisuals } from "./core/paths.js";
 import { 
   initCamera, 
   initControls, 
@@ -271,6 +271,16 @@ function init() {
   // Load all models
   loadGLTFModels();
   
+  // Add event handler for spline visualization toggle
+  if (controls.splineButton) {
+    controls.splineButton.addEventListener("click", () => {
+      const isVisible = toggleSplineVisuals();
+      controls.splineButton.textContent = isVisible ? 
+        "Hide Spline Visualizations" : 
+        "Show Spline Visualizations";
+    });
+  }
+  
   // Store reference to controls for updating later
   window.controlsReference = controls;
   
@@ -330,13 +340,35 @@ function init() {
  * Enable the camera button once everything is loaded
  */
 function enableCameraButton() {
-  if (window.controlsReference && window.controlsReference.cameraButton) {
-    const cameraButton = window.controlsReference.cameraButton;
-    cameraButton.disabled = false;
-    cameraButton.style.opacity = "1";
-    cameraButton.style.cursor = "pointer";
-    cameraButton.title = "Click to change camera mode";
-    console.log("Camera button enabled");
+  if (window.controlsReference) {
+    if (window.controlsReference.cameraButton) {
+      const cameraButton = window.controlsReference.cameraButton;
+      cameraButton.disabled = false;
+      cameraButton.style.opacity = "1";
+      cameraButton.style.cursor = "pointer";
+      cameraButton.title = "Click to change camera mode";
+      console.log("Camera button enabled");
+    }
+    
+    // Also enable the spline button
+    if (window.controlsReference.splineButton) {
+      const splineButton = window.controlsReference.splineButton;
+      splineButton.disabled = false;
+      splineButton.style.opacity = "1";
+      splineButton.style.cursor = "pointer";
+      splineButton.title = "Click to toggle spline visualizations";
+      console.log("Spline button enabled");
+    }
+    
+    // Also enable the physics button
+    if (window.controlsReference.physicsButton) {
+      const physicsButton = window.controlsReference.physicsButton;
+      physicsButton.disabled = false;
+      physicsButton.style.opacity = "1";
+      physicsButton.style.cursor = "pointer";
+      physicsButton.title = "Click to toggle physics visualization";
+      console.log("Physics button enabled");
+    }
   }
 }
 

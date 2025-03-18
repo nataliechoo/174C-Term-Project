@@ -50,17 +50,30 @@ export const starControlPoints = [
 export const splineDegree = 2;
 export const starSplineDegree = 2;
 
+// Store references to visualization objects
+let splineVisualObjects = [];
+let splineVisualsVisible = true;
+
 /**
  * Initialize B-spline visualization
  */
 export function initSplinePaths() {
+  // Clear any existing visual objects
+  splineVisualObjects.forEach(obj => {
+    if (obj && obj.parent) {
+      obj.parent.remove(obj);
+    }
+  });
+  splineVisualObjects = [];
+
   // Create visual markers for camera control points
   cameraControlPoints.forEach(point => {
     const sphereGeometry = new THREE.SphereGeometry(10, 16, 16);
     const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
     const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
     sphere.position.set(point[0], point[1], point[2]);
-    scene.add(sphere); // comment to disable visual
+    scene.add(sphere);
+    splineVisualObjects.push(sphere);
   });
 
   // Create camera path line
@@ -77,7 +90,8 @@ export function initSplinePaths() {
   const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
   const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
   const curveLine = new THREE.Line(geometry, material);
-  scene.add(curveLine); // comment to disable visual
+  scene.add(curveLine);
+  splineVisualObjects.push(curveLine);
 
   // Create visual markers for star control points
   starControlPoints.forEach(point => {
@@ -85,7 +99,8 @@ export function initSplinePaths() {
     const starSphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff8800 });
     const starSphere = new THREE.Mesh(starSphereGeometry, starSphereMaterial);
     starSphere.position.set(point[0], point[1], point[2]);
-    scene.add(starSphere); // comment to disable visual
+    scene.add(starSphere);
+    splineVisualObjects.push(starSphere);
   });
 
   // Create star path line
@@ -102,9 +117,26 @@ export function initSplinePaths() {
   const starGeometry = new THREE.BufferGeometry().setFromPoints(starCurvePoints);
   const starMaterial = new THREE.LineBasicMaterial({ color: 0x0088ff });
   const starCurveLine = new THREE.Line(starGeometry, starMaterial);
-  scene.add(starCurveLine); // comment to disable visual
+  scene.add(starCurveLine);
+  splineVisualObjects.push(starCurveLine);
 
   console.log("Spline and control points added to scene");
+}
+
+/**
+ * Toggle spline visualizations on/off
+ * @returns {boolean} New visibility state
+ */
+export function toggleSplineVisuals() {
+  splineVisualsVisible = !splineVisualsVisible;
+  
+  splineVisualObjects.forEach(obj => {
+    if (obj) {
+      obj.visible = splineVisualsVisible;
+    }
+  });
+  
+  return splineVisualsVisible;
 }
 
 /**
